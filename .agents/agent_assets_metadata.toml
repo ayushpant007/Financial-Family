@@ -1,0 +1,14 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "kfh9f6RIz3BtGoeRDsq7z"
+uri = "file://PRODUCT_REPORT.md"
+type = "text"
+title = "Financial Family — Product Progress Report"
+
+[[outputs]]
+id = "l5eOZdbeH-Q343xk0pRKI"
+uri = "file://CLIENT_BENEFITS.md"
+type = "text"
+title = "Financial Family — For Our Clients"

@@ -1,0 +1,658 @@
+import React from "react";
+import { cn } from "@/lib/utils";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { 
+  FileText, 
+  Upload, 
+  ShieldCheck, 
+  AlertCircle, 
+  CheckCircle2, 
+  Clock,
+  Eye,
+  Lock,
+  Download,
+  Trash2,
+  KeyRound,
+  X,
+  LockKeyhole
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { Toaster } from "@/components/ui/toaster";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/lib/auth";
+
+interface Document {
+  id: number;
+  clientId: number;
+  filename: string;
+  fileType: string;
+  uploadTimestamp: string;
+  client?: { name: string };
+}
+
+interface Extraction {
+  id: number;
+  extractedText: string;
+  maskedFieldsLog: Record<string, boolean>;
+}
+
+interface UserWithMpin extends User {
+  hasMpin?: boolean;
+}
+
+export function DocumentsView({ isAdmin = false }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
+  const [targetClientId, setTargetClientId] = React.useState<string>("");
+  const [isUploading, setIsUploading] = React.useState(false);
+  const [viewingDoc, setViewingDoc] = React.useState<Document | null>(null);
+  const [deletingDoc, setDeletingDoc] = React.useState<Document | null>(null);
+
+  // Password prompt state
+  const [passwordPromptOpen, setPasswordPromptOpen] = React.useState(false);
+  const [pdfPassword, setPdfPassword] = React.useState("");
+  const [pendingFormData, setPendingFormData] = React.useState<FormData | null>(null);
+
+  // MPIN state
+  const [mpinPromptOpen, setMpinPromptOpen] = React.useState(false);
+  const [mpinValue, setMpinValue] = React.useState("");
+  const [mpinActionDoc, setMpinActionDoc] = React.useState<Document | null>(null);
+  
+  const [setMpinOpen, setSetMpinOpen] = React.useState(false);
+  const [newMpin, setNewMpin] = React.useState("");
+  const [isSettingMpin, setIsSettingMpin] = React.useState(false);
+  
+  // Session-level verification
+  const [isMpinVerifiedInSession, setIsMpinVerifiedInSession] = React.useState(false);
+  const [shouldShake, setShouldShake] = React.useState(false);
+
+  const { data: documents, isLoading } = useQuery<Document[]>({
+    queryKey: ["documents"],
+    queryFn: async () => {
+      const res = await fetch("/api/documents");
+      if (!res.ok) throw new Error("Failed to fetch documents");
+      return res.json();
+    }
+  });
+
+  const { data: clients } = useQuery<any[]>({
+    queryKey: ["clients"],
+    enabled: isAdmin,
+    queryFn: async () => {
+      const res = await fetch("/api/clients");
+      if (!res.ok) throw new Error("Failed to fetch clients");
+      return res.json();
+    }
+  });
+
+  // Extraction removed as per user request
+  const extraction = null;
+  const isLoadingExtraction = false;
+
+  const doUpload = async (formData: FormData) => {
+    const res = await fetch("/api/documents/upload", {
+      method: "POST",
+      body: formData,
+    });
+    const body = await res.json();
+    if (!res.ok) {
+      // Special code for password-protected PDFs
+      if (body.error === "PASSWORD_REQUIRED") {
+        throw Object.assign(new Error(body.message), { code: "PASSWORD_REQUIRED" });
+      }
+      throw new Error(body.error || "Upload failed");
+    }
+    return body;
+  };
+
+  const uploadMutation = useMutation({
+    mutationFn: doUpload,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      toast({
+        title: "Success",
+        description: "Document uploaded and processed successfully",
+      });
+      setSelectedFile(null);
+      setTargetClientId("");
+      setPdfPassword("");
+      setPendingFormData(null);
+      setPasswordPromptOpen(false);
+    },
+    onError: (error: any) => {
+      if (error.code === "PASSWORD_REQUIRED") {
+        // Open the password dialog and keep the formData so we can retry
+        setPasswordPromptOpen(true);
+        return;
+      }
+      toast({
+        variant: "destructive",
+        title: "Upload Failed",
+        description: error.message,
+      });
+      setPasswordPromptOpen(false);
+    },
+    onSettled: () => setIsUploading(false)
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (docId: number) => {
+      const res = await fetch(`/api/documents/${docId}`, { method: "DELETE" });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Delete failed");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      toast({ title: "Deleted", description: "Document deleted successfully." });
+      setDeletingDoc(null);
+    },
+    onError: (err: any) => {
+      toast({ variant: "destructive", title: "Delete Failed", description: err.message });
+      setDeletingDoc(null);
+    }
+  });
+
+  const verifyMpinMutation = useMutation({
+    mutationFn: async (mpin: string) => {
+      const res = await fetch("/api/auth/verify-mpin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mpin }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Invalid MPIN");
+      }
+      return res.json();
+    }
+  });
+
+  const setMpinMutation = useMutation({
+    mutationFn: async (mpin: string) => {
+      const res = await fetch("/api/auth/mpin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mpin }),
+      });
+      if (!res.ok) {
+        const body = await res.json();
+        throw new Error(body.error || "Failed to set MPIN");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
+      toast({ title: "Success", description: "MPIN set successfully." });
+      setSetMpinOpen(false);
+      setNewMpin("");
+    },
+    onError: (err: any) => {
+      toast({ variant: "destructive", title: "Error", description: err.message });
+    }
+  });
+
+  const buildFormData = (password?: string) => {
+    const formData = new FormData();
+    if (!selectedFile) return null;
+    formData.append("file", selectedFile);
+    if (isAdmin) formData.append("clientId", targetClientId);
+    if (password) formData.append("password", password);
+    return formData;
+  };
+
+  const handleUpload = () => {
+    if (!selectedFile) return;
+    if (isAdmin && !targetClientId) {
+      toast({
+        variant: "destructive",
+        title: "Selection Required",
+        description: "Please select a client",
+      });
+      return;
+    }
+
+    const formData = buildFormData();
+    if (!formData) return;
+    setPendingFormData(formData);
+    setIsUploading(true);
+    uploadMutation.mutate(formData);
+  };
+
+  const handleUploadWithPassword = () => {
+    if (!selectedFile) return;
+    const formData = buildFormData(pdfPassword);
+    if (!formData) return;
+    setPendingFormData(formData);
+    setIsUploading(true);
+    setPasswordPromptOpen(false);
+    uploadMutation.mutate(formData);
+  };
+
+  const handleViewFile = (doc: Document) => {
+    // If already verified in this session, skip prompt
+    if (isMpinVerifiedInSession) {
+      window.open(`/api/documents/${doc.id}/download`, "_blank");
+      return;
+    }
+
+    // Check if user has MPIN set
+    const currentUser = user as UserWithMpin;
+    if (!currentUser?.hasMpin) {
+      toast({
+        variant: "destructive",
+        title: "MPIN Required",
+        description: "Please set your 6-digit MPIN first to view documents.",
+      });
+      setSetMpinOpen(true);
+      return;
+    }
+
+    setMpinActionDoc(doc);
+    setMpinPromptOpen(true);
+  };
+
+  const handleMpinSubmit = () => {
+    if (mpinValue.length !== 6) return;
+
+    verifyMpinMutation.mutate(mpinValue, {
+      onSuccess: () => {
+        setIsMpinVerifiedInSession(true);
+        if (mpinActionDoc) {
+          toast({
+            title: "Verification Successful",
+            description: "Opening file in 5 seconds...",
+          });
+          setTimeout(() => {
+            window.open(`/api/documents/${mpinActionDoc.id}/download`, "_blank");
+          }, 5000);
+        }
+        setMpinPromptOpen(false);
+        setMpinValue("");
+        setMpinActionDoc(null);
+      },
+      onError: (err: any) => {
+        setShouldShake(true);
+        setTimeout(() => setShouldShake(false), 500);
+        setMpinValue(""); // clear on error
+        toast({
+          variant: "destructive",
+          title: "Access Denied",
+          description: err.message,
+        });
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-12 md:pb-0">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Secure Documents</h1>
+          <p className="text-sm text-muted-foreground mt-1">Encrypted storage with MPIN-protected access.</p>
+        </div>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button 
+            variant="outline" 
+            className="gap-2 h-11 md:h-10"
+            onClick={() => setSetMpinOpen(true)}
+          >
+            <LockKeyhole className="h-4 w-4" />
+            { (user as UserWithMpin)?.hasMpin ? "Change MPIN" : "Set MPIN" }
+          </Button>
+          <Badge variant="outline" className="px-3 py-2 md:py-1 gap-2 bg-primary/5 border-primary/20 text-primary self-start sm:self-center h-11 md:h-10">
+            <ShieldCheck className="h-4 w-4" />
+            AES-256 Encrypted
+          </Badge>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        {/* Upload Section */}
+        <Card className="lg:col-span-1 border-dashed border-2 bg-muted/20">
+          <CardHeader>
+            <CardTitle className="text-lg">Upload New Document</CardTitle>
+            <CardDescription>Support for PDF, DOCX, and Images (.jpg, .png)</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isAdmin && (
+              <div className="space-y-2">
+                <Label>Select Client</Label>
+                <select 
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                  value={targetClientId}
+                  onChange={(e) => setTargetClientId(e.target.value)}
+                >
+                  <option value="">Choose a client...</option>
+                  {clients?.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              <Label>File</Label>
+              <div 
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
+                  selectedFile ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50"
+                }`}
+                onClick={() => document.getElementById("file-upload")?.click()}
+              >
+                <Upload className={`mx-auto h-8 w-8 mb-2 ${selectedFile ? "text-primary" : "text-muted-foreground"}`} />
+                <p className="text-sm font-medium">
+                  {selectedFile ? selectedFile.name : "Click to select a file"}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">Max 5MB</p>
+                <input 
+                  id="file-upload"
+                  type="file" 
+                  className="hidden" 
+                  accept=".pdf,.docx,.jpg,.jpeg,.png"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    // 1. Check size (5MB)
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast({
+                        variant: "destructive",
+                        title: "File Too Large",
+                        description: "File is too large. Max limit is 5MB.",
+                      });
+                      e.target.value = ""; // Reset
+                      return;
+                    }
+
+                    // 2. Check extension
+                    const allowed = [".pdf", ".docx", ".jpg", ".jpeg", ".png"];
+                    const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
+                    if (!allowed.includes(ext)) {
+                      toast({
+                        variant: "destructive",
+                        title: "Unsupported Format",
+                        description: `Allowed formats: ${allowed.join(", ")}`,
+                      });
+                      e.target.value = ""; // Reset
+                      return;
+                    }
+
+                    setSelectedFile(file);
+                    setPdfPassword(""); // reset password on new file
+                  }}
+                />
+              </div>
+            </div>
+
+            <Button 
+              className="w-full" 
+              disabled={!selectedFile || isUploading}
+              onClick={handleUpload}
+            >
+              {isUploading ? (
+                <>
+                  <Clock className="mr-2 h-4 w-4 animate-spin" />
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Document
+                </>
+              )}
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* History List */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="text-lg">Processed Documents</CardTitle>
+            <CardDescription>Recently uploaded files and their extraction status.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="h-64 flex items-center justify-center text-muted-foreground">
+                <Clock className="h-8 w-8 animate-spin mr-3" />
+                Loading documents...
+              </div>
+            ) : documents?.length === 0 ? (
+              <div className="h-64 flex flex-col items-center justify-center text-muted-foreground border-2 border-dotted rounded-xl">
+                <FileText className="h-12 w-12 mb-4 opacity-20" />
+                <p>No documents uploaded yet.</p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[400px] pr-4">
+                <div className="space-y-3">
+                  {documents?.map((doc) => (
+                    <div key={doc.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:shadow-md transition-all group">
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-sm truncate max-w-[200px]">{doc.filename}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <Badge variant="secondary" className="text-[10px] uppercase font-bold px-1.5 py-0">
+                              {doc.fileType}
+                            </Badge>
+                            <span className="text-[11px] text-muted-foreground">
+                              {new Date(doc.uploadTimestamp).toLocaleString()}
+                            </span>
+                            {isAdmin && (
+                              <span className="text-[11px] font-medium text-primary">
+                                • {doc.client?.name}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0 ml-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 bg-primary/5 border-primary/20 hover:bg-primary/10"
+                          title="View original file"
+                          onClick={() => handleViewFile(doc)}
+                        >
+                          <Download className="h-3.5 w-3.5" />
+                          <span className="hidden sm:inline">View File</span>
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 gap-1.5 text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30 hover:border-destructive"
+                          title="Delete document"
+                          onClick={() => setDeletingDoc(doc)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* MPIN Verification Dialog */}
+      <Dialog open={mpinPromptOpen} onOpenChange={(open) => {
+        if (!open) { setMpinPromptOpen(false); setMpinValue(""); setMpinActionDoc(null); }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LockKeyhole className="h-5 w-5 text-primary" />
+              Secure Verification
+            </DialogTitle>
+            <DialogDescription>
+              Enter your 6-digit MPIN to unlock <strong>{mpinActionDoc?.filename}</strong>.
+            </DialogDescription>
+          </DialogHeader>
+          <div className={cn("flex flex-col items-center justify-center gap-6 py-6", shouldShake && "animate-shake")}>
+            <InputOTP
+              maxLength={6}
+              value={mpinValue}
+              onChange={(value) => setMpinValue(value)}
+              onComplete={handleMpinSubmit}
+              autoFocus
+              type="password"
+            >
+              <InputOTPGroup className="gap-2">
+                <InputOTPSlot index={0} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={1} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={2} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={3} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={4} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={5} className="w-12 h-14 text-xl rounded-md" />
+              </InputOTPGroup>
+            </InputOTP>
+            <p className="text-xs text-muted-foreground">Verification needed once per session</p>
+          </div>
+          <DialogFooter className="sm:justify-center">
+            <Button variant="ghost" onClick={() => { setMpinPromptOpen(false); setMpinValue(""); }}>
+              Cancel
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Set/Change MPIN Dialog */}
+      <Dialog open={setMpinOpen} onOpenChange={(open) => {
+        if (!open) { setSetMpinOpen(false); setNewMpin(""); }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" />
+              {(user as UserWithMpin)?.hasMpin ? "Change MPIN" : "Create Security MPIN"}
+            </DialogTitle>
+            <DialogDescription>
+              Choose a 6-digit number to protect your financial documents.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-6">
+            <InputOTP
+              maxLength={6}
+              value={newMpin}
+              onChange={(value) => setNewMpin(value)}
+              autoFocus
+              type="password"
+            >
+              <InputOTPGroup className="gap-2">
+                <InputOTPSlot index={0} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={1} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={2} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={3} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={4} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={5} className="w-12 h-14 text-xl rounded-md" />
+              </InputOTPGroup>
+            </InputOTP>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" className="flex-1" onClick={() => { setSetMpinOpen(false); setNewMpin(""); }}>
+              Cancel
+            </Button>
+            <Button 
+              className="flex-1"
+              onClick={() => setMpinMutation.mutate(newMpin)} 
+              disabled={newMpin.length !== 6 || setMpinMutation.isPending}
+            >
+              {setMpinMutation.isPending ? (
+                <><Clock className="mr-2 h-4 w-4 animate-spin" />Saving...</>
+              ) : (
+                <><CheckCircle2 className="mr-2 h-4 w-4" />Set MPIN</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Prompt Dialog */}
+      <Dialog open={passwordPromptOpen} onOpenChange={(open) => {
+        if (!open) { setPasswordPromptOpen(false); setIsUploading(false); }
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" />
+              Password Protected PDF
+            </DialogTitle>
+            <DialogDescription>
+              <strong>{selectedFile?.name}</strong> is encrypted. Enter the PDF password to unlock and process it.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <Label htmlFor="pdf-password">PDF Password</Label>
+            <Input
+              id="pdf-password"
+              type="password"
+              placeholder="Enter document password..."
+              value={pdfPassword}
+              onChange={(e) => setPdfPassword(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") handleUploadWithPassword(); }}
+              autoFocus
+            />
+          </div>
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" onClick={() => { setPasswordPromptOpen(false); setIsUploading(false); }}>
+              Cancel
+            </Button>
+            <Button onClick={handleUploadWithPassword} disabled={!pdfPassword || isUploading}>
+              {isUploading ? (
+                <><Clock className="mr-2 h-4 w-4 animate-spin" />Processing...</>
+              ) : (
+                <><CheckCircle2 className="mr-2 h-4 w-4" />Unlock & Upload</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={!!deletingDoc} onOpenChange={(open) => { if (!open) setDeletingDoc(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="h-5 w-5" />
+              Delete Document
+            </DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete <strong>{deletingDoc?.filename}</strong>?
+              This will permanently remove the file and all extracted data. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-4 gap-2">
+            <Button variant="outline" onClick={() => setDeletingDoc(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingDoc && deleteMutation.mutate(deletingDoc.id)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? (
+                <><Clock className="mr-2 h-4 w-4 animate-spin" />Deleting...</>
+              ) : (
+                <><Trash2 className="mr-2 h-4 w-4" />Delete</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

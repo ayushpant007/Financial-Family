@@ -1,0 +1,197 @@
+Build a Progressive Web App (PWA) for a financial advisory platform that works smoothly on both desktop and mobile devices.
+
+The application should have two main roles:
+
+1. Admin (Advisor)
+2. Client (Read-only user)
+
+---
+
+## 🎯 CORE IDEA
+
+The app is a "Client Wealth Management System" where the Admin manages client accounts and their complete financial data (assets, liabilities, net worth). Clients can log in to view their financial overview.
+
+---
+
+# 👥 USER ROLES
+
+## 1. ADMIN PANEL (MAIN CONTROL)
+
+---
+
+### 🔹 STEP 1: CLIENT ACCOUNT CREATION
+
+Admin should first create client login credentials:
+
+Fields:
+
+* Client Name
+* Email / Phone
+* Username
+* Password
+
+👉 After clicking "Create Client":
+
+✔ Client account is created
+✔ THEN system should automatically redirect to:
+
+---
+
+### 🔹 STEP 2: CLIENT ONBOARDING (FILL DETAILS SCREEN)
+
+Immediately after account creation, Admin should see a **"Fill Client Details" screen**
+
+This screen allows Admin to enter complete financial data of that client.
+
+---
+
+# 🧾 FINANCIAL DATA ENTRY (ONBOARDING FORM)
+
+Each asset type should have its own structured form.
+
+---
+
+## 🟢 ASSETS
+
+### 1. Mutual Funds / Stocks
+
+* Asset Type
+* Asset Name
+* Transaction Type (Buy/Sell)
+* Date
+* Units
+* Price
+* Amount (auto)
+
+---
+
+### 2. Fixed Deposit (FD)
+
+* Institution Name
+* Investment Amount
+* Interest Rate (%)
+* Start Date
+* Maturity Date
+* Payout Type
+
+---
+
+### 3. Recurring Deposit (RD)
+
+* Institution Name
+* Monthly Investment
+* Interest Rate (%)
+* Start Date
+* Tenure
+
+---
+
+### 4. Provident Fund (PPF / EPF)
+
+* Account Type (PPF / EPF)
+* Total Contribution
+* Interest Rate (%)
+* Start Year
+
+---
+
+### 5. Cash / Bank Balance
+
+* Bank Name
+* Account Type
+* Current Balance
+
+---
+
+---
+
+## 🔴 LIABILITIES
+
+### Loan Details:
+
+* Loan Type
+* Lender Name
+* Total Loan Amount
+* Outstanding Amount
+* Interest Rate
+* EMI
+* Start Date
+* End Date
+
+---
+
+# 🧠 AUTOMATIC CALCULATIONS
+
+After Admin fills data:
+
+System should automatically compute:
+
+* Total Assets
+* Total Liabilities
+* Net Worth
+
+```text
+Net Worth = Total Assets - Total Liabilities
+```
+
+---
+
+# 📊 DASHBOARD (ADMIN VIEW)
+
+After onboarding is completed, Admin should see:
+
+* Client Net Worth
+* Total Assets
+* Total Liabilities
+* Asset breakdown
+
+---
+
+# 👤 CLIENT PANEL
+
+Client logs in using credentials created by Admin.
+
+Client can:
+
+* View Dashboard
+* View Assets & Liabilities
+* View Net Worth
+
+⚠️ Client cannot edit any data (read-only)
+
+---
+
+# 📱 UI/UX REQUIREMENTS
+
+* Mobile-first design
+* Clean fintech-style UI
+* Smooth navigation
+* Simple onboarding flow
+
+---
+
+# ⚙️ TECH REQUIREMENTS
+
+* PWA (installable, responsive)
+* React / Next.js frontend
+* Firebase / Supabase backend
+* Chart support (optional)
+
+---
+
+# 🚫 IMPORTANT (FOR NOW)
+
+* Do NOT integrate external APIs yet
+* All data is manually entered by Admin
+* Keep structure ready for future API integration
+
+---
+
+# 🎯 GOAL
+
+Build a simple but scalable advisory platform where:
+
+* Admin creates client accounts
+* Immediately fills their financial details
+* System calculates net worth automatically
+* Clients can log in and view their financial position clearly

@@ -1,0 +1,939 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Client Wealth Management API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: clients
+    description: Client management
+  - name: assets
+    description: Asset management
+  - name: liabilities
+    description: Liability management
+  - name: dashboard
+    description: Dashboard summaries
+  - name: family
+    description: Family member management
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with username and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout current session
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current authenticated user
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients:
+    get:
+      operationId: listClients
+      tags: [clients]
+      summary: List all clients (admin only)
+      responses:
+        "200":
+          description: List of clients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Client"
+    post:
+      operationId: createClient
+      tags: [clients]
+      summary: Create a new client account (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateClientBody"
+      responses:
+        "201":
+          description: Client created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "400":
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /clients/{clientId}:
+    get:
+      operationId: getClient
+      tags: [clients]
+      summary: Get a client by ID
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+        "404":
+          description: Client not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      operationId: updateClient
+      tags: [clients]
+      summary: Update client info (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateClientBody"
+      responses:
+        "200":
+          description: Updated client
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Client"
+    delete:
+      operationId: deleteClient
+      tags: [clients]
+      summary: Delete a client (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Client deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /clients/{clientId}/assets:
+    get:
+      operationId: listClientAssets
+      tags: [assets]
+      summary: List all assets for a client
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of assets
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Asset"
+    post:
+      operationId: createClientAsset
+      tags: [assets]
+      summary: Add an asset for a client (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAssetBody"
+      responses:
+        "201":
+          description: Asset created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+
+  /clients/{clientId}/assets/{assetId}:
+    put:
+      operationId: updateClientAsset
+      tags: [assets]
+      summary: Update an asset (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAssetBody"
+      responses:
+        "200":
+          description: Updated asset
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Asset"
+    delete:
+      operationId: deleteClientAsset
+      tags: [assets]
+      summary: Delete an asset (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Asset deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /clients/{clientId}/liabilities:
+    get:
+      operationId: listClientLiabilities
+      tags: [liabilities]
+      summary: List all liabilities for a client
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of liabilities
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Liability"
+    post:
+      operationId: createClientLiability
+      tags: [liabilities]
+      summary: Add a liability for a client (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLiabilityBody"
+      responses:
+        "201":
+          description: Liability created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Liability"
+
+  /clients/{clientId}/liabilities/{liabilityId}:
+    put:
+      operationId: updateClientLiability
+      tags: [liabilities]
+      summary: Update a liability (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: liabilityId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateLiabilityBody"
+      responses:
+        "200":
+          description: Updated liability
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Liability"
+    delete:
+      operationId: deleteClientLiability
+      tags: [liabilities]
+      summary: Delete a liability (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: liabilityId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Liability deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /clients/{clientId}/family-members:
+    get:
+      operationId: listFamilyMembers
+      tags: [family]
+      summary: List all family members for a client
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of family members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FamilyMember"
+    post:
+      operationId: createFamilyMember
+      tags: [family]
+      summary: Add a family member (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateFamilyMemberBody"
+      responses:
+        "201":
+          description: Family member created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyMember"
+
+  /clients/{clientId}/family-members/{familyMemberId}:
+    put:
+      operationId: updateFamilyMember
+      tags: [family]
+      summary: Update a family member (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: familyMemberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateFamilyMemberBody"
+      responses:
+        "200":
+          description: Updated family member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FamilyMember"
+    delete:
+      operationId: deleteFamilyMember
+      tags: [family]
+      summary: Delete a family member (admin only)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: familyMemberId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Family member deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /clients/{clientId}/summary:
+    get:
+      operationId: getClientSummary
+      tags: [dashboard]
+      summary: Get financial summary (net worth, total assets, total liabilities, asset breakdown)
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Financial summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientSummary"
+
+  /dashboard/overview:
+    get:
+      operationId: getDashboardOverview
+      tags: [dashboard]
+      summary: Admin dashboard overview (total clients, total AUM, asset breakdown across all clients)
+      responses:
+        "200":
+          description: Dashboard overview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardOverview"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    LoginBody:
+      type: object
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - username
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        message:
+          type: string
+      required:
+        - user
+        - message
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string
+          enum: [admin, client]
+        clientId:
+          type: integer
+          nullable: true
+        name:
+          type: string
+      required:
+        - id
+        - username
+        - role
+        - name
+
+    CreateClientBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+        username:
+          type: string
+        password:
+          type: string
+      required:
+        - name
+        - username
+        - password
+
+    UpdateClientBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        phone:
+          type: string
+
+    Client:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        username:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - name
+        - username
+        - createdAt
+
+    AssetType:
+      type: string
+      enum:
+        - mutual_fund
+        - stock
+        - fixed_deposit
+        - recurring_deposit
+        - provident_fund
+        - cash_bank
+
+    CreateAssetBody:
+      type: object
+      properties:
+        assetType:
+          $ref: "#/components/schemas/AssetType"
+        data:
+          type: object
+          additionalProperties: true
+        familyMemberId:
+          type: integer
+          nullable: true
+      required:
+        - assetType
+        - data
+
+    UpdateAssetBody:
+      type: object
+      properties:
+        data:
+          type: object
+          additionalProperties: true
+        familyMemberId:
+          type: integer
+          nullable: true
+      required:
+        - data
+
+    Asset:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        familyMemberId:
+          type: integer
+          nullable: true
+        assetType:
+          $ref: "#/components/schemas/AssetType"
+        data:
+          type: object
+          additionalProperties: true
+        value:
+          type: number
+        createdAt:
+          type: string
+      required:
+        - id
+        - clientId
+        - assetType
+        - data
+        - value
+        - createdAt
+
+    LoanType:
+      type: string
+      enum:
+        - home_loan
+        - car_loan
+        - personal_loan
+        - education_loan
+        - business_loan
+        - other
+
+    CreateLiabilityBody:
+      type: object
+      properties:
+        loanType:
+          $ref: "#/components/schemas/LoanType"
+        lenderName:
+          type: string
+        totalLoanAmount:
+          type: number
+        outstandingAmount:
+          type: number
+        interestRate:
+          type: number
+        emi:
+          type: number
+        startDate:
+          type: string
+        endDate:
+          type: string
+        familyMemberId:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+      required:
+        - loanType
+        - lenderName
+        - totalLoanAmount
+        - outstandingAmount
+        - interestRate
+        - emi
+
+    UpdateLiabilityBody:
+      type: object
+      properties:
+        loanType:
+          $ref: "#/components/schemas/LoanType"
+        lenderName:
+          type: string
+        totalLoanAmount:
+          type: number
+        outstandingAmount:
+          type: number
+        interestRate:
+          type: number
+        emi:
+          type: number
+        startDate:
+          type: string
+        endDate:
+          type: string
+        familyMemberId:
+          type: integer
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    Liability:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        familyMemberId:
+          type: integer
+          nullable: true
+        loanType:
+          $ref: "#/components/schemas/LoanType"
+        lenderName:
+          type: string
+        totalLoanAmount:
+          type: number
+        outstandingAmount:
+          type: number
+        interestRate:
+          type: number
+        emi:
+          type: number
+        startDate:
+          type: string
+          nullable: true
+        endDate:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+          description: Additional details or specific category breakdown
+        createdAt:
+          type: string
+      required:
+        - id
+        - clientId
+        - loanType
+        - lenderName
+        - totalLoanAmount
+        - outstandingAmount
+        - interestRate
+        - emi
+        - createdAt
+
+    AssetBreakdownItem:
+      type: object
+      properties:
+        assetType:
+          $ref: "#/components/schemas/AssetType"
+        total:
+          type: number
+        count:
+          type: integer
+      required:
+        - assetType
+        - total
+        - count
+
+    ClientSummary:
+      type: object
+      properties:
+        clientId:
+          type: integer
+        clientName:
+          type: string
+        totalAssets:
+          type: number
+        totalLiabilities:
+          type: number
+        netWorth:
+          type: number
+        assetBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetBreakdownItem"
+      required:
+        - clientId
+        - clientName
+        - totalAssets
+        - totalLiabilities
+        - netWorth
+        - assetBreakdown
+
+    DashboardOverview:
+      type: object
+      properties:
+        totalClients:
+          type: integer
+        totalAUM:
+          type: number
+        totalLiabilities:
+          type: number
+        totalNetWorth:
+          type: number
+        assetBreakdown:
+          type: array
+          items:
+            $ref: "#/components/schemas/AssetBreakdownItem"
+        recentClients:
+          type: array
+          items:
+            $ref: "#/components/schemas/Client"
+      required:
+        - totalClients
+        - totalAUM
+        - totalLiabilities
+        - totalNetWorth
+        - assetBreakdown
+        - recentClients
+
+    FamilyMember:
+      type: object
+      properties:
+        id:
+          type: integer
+        clientId:
+          type: integer
+        name:
+          type: string
+        dob:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        relation:
+          type: string
+          enum: [Parent, Spouse, Child]
+        createdAt:
+          type: string
+      required:
+        - id
+        - clientId
+        - name
+        - relation
+        - createdAt
+
+    CreateFamilyMemberBody:
+      type: object
+      properties:
+        name:
+          type: string
+        dob:
+          type: string
+        phone:
+          type: string
+        relation:
+          type: string
+          enum: [Parent, Spouse, Child]
+      required:
+        - name
+        - relation
+
+    UpdateFamilyMemberBody:
+      type: object
+      properties:
+        name:
+          type: string
+        dob:
+          type: string
+        phone:
+          type: string
+        relation:
+          type: string
+          enum: [Parent, Spouse, Child]
