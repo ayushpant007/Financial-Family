@@ -21,13 +21,42 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils-format";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, DollarSign, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, IndianRupee, ArrowLeft } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FundAutocomplete } from "@/components/fund-autocomplete";
 import { StockAutocomplete } from "@/components/stock-autocomplete";
 import { MutualFundNav } from "@/components/mutual-fund-nav";
 import { StockPriceDisplay } from "@/components/stock-price-display";
 import { FDValuation, RDValuation, PFValuation, calculatePFCurrentValue, calculateEMI, LoanValuation, calculateIncomeTax, SIPValuation, SWPValuation, STPValuation, calculateMFCurrentValue } from "@/components/fixed-income-valuation";
+import { ScrollingFeatureShowcase } from "@/components/ui/interactive-scrolling-story-component";
+import { usePageBackground } from "@/hooks/usePageBackground";
+
+const CLIENT_DETAIL_SLIDES = [
+  {
+    title: "Complete Family Financial Map",
+    description: "Every asset, every liability, every family member — all in one unified view. Real-time valuations, auto-calculated EMIs, and live market prices.",
+    image: "https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?q=80&w=2070&auto=format&fit=crop",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+  {
+    title: "Asset Allocation Breakdown",
+    description: "Instantly see how wealth is distributed across mutual funds, stocks, fixed deposits, provident funds, and cash — with live NAV and NSE pricing.",
+    image: "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?q=80&w=2070&auto=format&fit=crop",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+  {
+    title: "Liability Intelligence",
+    description: "Track every loan, EMI, tax due, insurance premium, and household obligation with precise outstanding amounts and repayment timelines.",
+    image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?q=80&w=2070&auto=format&fit=crop",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+  {
+    title: "Generational Family Tree",
+    description: "Visualise the full family structure and drill into any member's personal assets and liabilities for a truly multi-generational view.",
+    image: "https://images.unsplash.com/photo-1529156069898-49953e39b3ac?q=80&w=2070&auto=format&fit=crop",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+];
 
 const ASSET_LABELS: Record<string, string> = {
   mutual_fund: "Mutual Fund",
@@ -43,7 +72,7 @@ const LOAN_LABELS: Record<string, string> = {
   education_loan: "Education Loan", business_loan: "Business Loan", other: "Other",
 };
 
-const CHART_COLORS = ["#1e3a5f", "#c9a54a", "#2d5a8e", "#8b6914", "#4a7fad"];
+const CHART_COLORS = ["#C9A84C", "#334155", "#64748B", "#94A3B8", "#CBD5E1"];
 
 const ASSET_TYPES = [
   { value: "mutual_fund", label: "Mutual Fund" },
@@ -149,6 +178,8 @@ export default function ClientDetailPage() {
   const { data: summary } = useGetClientSummary(clientId, { query: { enabled: !!clientId, queryKey: getGetClientSummaryQueryKey(clientId) } as any });
   const { data: assets } = useListClientAssets(clientId, { query: { enabled: !!clientId, queryKey: getListClientAssetsQueryKey(clientId) } as any });
   const { data: liabilities } = useListClientLiabilities(clientId, { query: { enabled: !!clientId, queryKey: getListClientLiabilitiesQueryKey(clientId) } as any });
+
+  usePageBackground('light');
 
   const createAsset = useCreateClientAsset();
   const updateAsset = useUpdateClientAsset();
@@ -426,38 +457,53 @@ export default function ClientDetailPage() {
   return (
     <Layout>
       <div className="space-y-6 pb-20 md:pb-0">
-        <div className="flex flex-col md:flex-row md:items-center gap-4">
+        <ScrollingFeatureShowcase
+          slides={CLIENT_DETAIL_SLIDES}
+          height="440px"
+          ctaText="View Portfolio"
+          onClick={() => {
+            document.getElementById('assets-section')?.scrollIntoView({ behavior: 'smooth' });
+          }}
+        />
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8" data-reveal>
           <div className="flex items-center gap-3">
             <Link href="/admin/clients">
-              <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full bg-muted/50">
+              <Button variant="ghost" size="icon" className="h-10 w-10 md:h-8 md:w-8 rounded-full bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-900">
                 <ArrowLeft className="h-5 w-5 md:h-4 md:w-4" />
               </Button>
             </Link>
             <div className="min-w-0">
-              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-foreground truncate">{client?.name ?? "Loading..."}</h1>
-              <p className="text-xs md:text-sm text-muted-foreground font-medium uppercase tracking-widest mt-1 opacity-70">
+              <h1 className="text-2xl md:text-3xl font-black tracking-tight text-slate-900 truncate">{client?.name ?? "Loading..."}</h1>
+              <p className="text-xs md:text-sm text-slate-500 font-medium uppercase tracking-widest mt-1 opacity-70">
                 @{client?.username} {client?.email ? `· ${client.email}` : ""}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
-          <Card className="premium-border bg-green-500/5 border-green-500/10">
-            <CardContent className="pt-6">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Family Assets</p>
-              <p className="text-2xl font-black text-green-700 mt-1">{formatCurrency(summary?.totalAssets ?? 0)}</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-reveal data-reveal-delay="100">
+          <Card className="glass-panel bg-emerald-50 border-emerald-200 shadow-sm">
+            <CardContent className="p-4 sm:p-6 pt-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-bold text-emerald-600/60 uppercase tracking-[0.2em]">Family Assets</p>
+                  <p className="text-2xl font-black text-slate-900 mt-1">{formatCurrency(summary?.totalAssets ?? 0)}</p>
+                </div>
+                <div className="h-10 w-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                  <IndianRupee className="h-5 w-5 text-emerald-600" />
+                </div>
+              </div>
             </CardContent>
           </Card>
-          <Card className="premium-border bg-red-500/5 border-red-500/10">
+          <Card className="glass-panel bg-rose-50 border-rose-200 shadow-sm">
             <CardContent className="pt-6">
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">Family Liabilities</p>
-              <p className="text-2xl font-black text-red-600 mt-1">{formatCurrency(summary?.totalLiabilities ?? 0)}</p>
+              <p className="text-[10px] font-bold text-rose-600/60 uppercase tracking-[0.2em]">Family Liabilities</p>
+              <p className="text-2xl font-black text-rose-600 mt-1">{formatCurrency(summary?.totalLiabilities ?? 0)}</p>
             </CardContent>
           </Card>
-          <Card className="gold-gradient border-none shadow-xl shadow-secondary/20">
-            <CardContent className="pt-6 text-secondary-foreground">
-              <p className="text-[10px] font-bold text-secondary-foreground/60 uppercase tracking-[0.2em]">Family Net Worth</p>
+          <Card className="glass-panel bg-primary/5 border-primary/20 shadow-xl shadow-primary/5">
+            <CardContent className="pt-6 text-slate-900">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-[0.2em]">Family Net Worth</p>
               <p className="text-2xl font-black mt-1">
                 {formatCurrency(summary?.netWorth ?? 0)}
               </p>
@@ -469,11 +515,11 @@ export default function ClientDetailPage() {
           <CardHeader className="px-0">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl">Family Tree</CardTitle>
-                <CardDescription>Visualize and manage family relationships and their financials</CardDescription>
+                <CardTitle className="text-xl text-slate-900">Family Tree</CardTitle>
+                <CardDescription className="text-slate-500">Visualize and manage family relationships and their financials</CardDescription>
               </div>
               {!isAdmin && (
-                <Button size="sm" variant="outline" onClick={() => setFamilyMemberDialog({ name: "", dob: "", phone: "", relation: "Child" })}>
+                <Button size="sm" variant="outline" className="border-slate-200" onClick={() => setFamilyMemberDialog({ name: "", dob: "", phone: "", relation: "Child" })}>
                   <Plus className="h-4 w-4 mr-2" /> Add Member
                 </Button>
               )}
@@ -498,16 +544,26 @@ export default function ClientDetailPage() {
         </Card>
 
         {chartData.length > 0 && (
-          <Card>
-            <CardHeader><CardTitle className="text-base">Asset Breakdown</CardTitle></CardHeader>
+          <Card className="glass-panel border-slate-200 bg-white/60 shadow-sm">
+            <CardHeader><CardTitle className="text-base text-slate-900 font-semibold">Asset Breakdown</CardTitle></CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={220}>
+              <ResponsiveContainer width="100%" height={380}>
                 <PieChart>
-                  <Pie data={chartData} cx="50%" cy="50%" outerRadius={80} dataKey="value">
+                  <Pie data={chartData} cx="50%" cy="40%" outerRadius={110} dataKey="value" stroke="#fff" strokeWidth={2}>
                     {chartData.map((_, index) => <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
                   </Pie>
-                  <Tooltip formatter={(value: number) => formatCurrency(value)} />
-                  <Legend formatter={(value) => <span className="text-xs">{value}</span>} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                    itemStyle={{ color: '#0f172a' }}
+                    formatter={(value: number) => formatCurrency(value)} 
+                  />
+                  <Legend 
+                    layout="vertical" 
+                    verticalAlign="bottom" 
+                    align="center"
+                    wrapperStyle={{ paddingTop: '10px', fontSize: '9px', paddingLeft: '10px', paddingRight: '10px' }}
+                    formatter={(value) => <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{value}</span>} 
+                  />
                 </PieChart>
               </ResponsiveContainer>
             </CardContent>
@@ -516,14 +572,14 @@ export default function ClientDetailPage() {
 
         <div className="grid grid-cols-1 gap-8">
           {/* Assets Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-foreground">
+          <div data-reveal data-reveal-delay="200">
+            <div id="assets-section" className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-slate-900">
                 {selectedMemberId === null ? "My Assets" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Assets`} 
-                ({assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})
+                <span className="ml-2 text-slate-400 text-sm font-medium">({assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})</span>
               </h2>
               {(!isAdmin || selectedMemberId === null) && (
-                <Button size="sm" className="gap-2" onClick={() => { setAssetDialog({ type: "mutual_fund", data: {} }); }}>
+                <Button size="sm" className="gap-2 shadow-lg shadow-primary/20" onClick={() => { setAssetDialog({ type: "mutual_fund", data: {} }); }}>
                   <Plus className="h-4 w-4" /> Add Asset
                 </Button>
               )}
@@ -531,28 +587,33 @@ export default function ClientDetailPage() {
 
             {(() => {
               const filteredAssets = assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
-              if (filteredAssets.length === 0) return <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">No assets yet</CardContent></Card>;
+              if (filteredAssets.length === 0) return <Card className="glass-panel border-slate-200 border-dashed bg-slate-50/50"><CardContent className="py-8 text-center text-slate-400 text-sm">No assets yet</CardContent></Card>;
               
               return filteredAssets.map((asset) => (
-                <Card key={asset.id}>
-                  <CardContent className="py-4">
+                <Card key={asset.id} className="glass-panel border-slate-100 bg-white hover:bg-slate-50 transition-all shadow-sm">
+                  <CardContent className="p-3 sm:p-6 py-4">
                     <div className="flex items-start justify-between">
                       <div>
-                        <Badge variant="secondary" className="text-xs mb-2">
+                        <Badge variant="secondary" className="text-[10px] mb-2 bg-slate-100 text-slate-600 border-slate-200 uppercase tracking-wider">
                           {ASSET_LABELS[asset.assetType]}
                           {(asset.data as any).investmentMethod ? ` - ${(asset.data as any).investmentMethod}` : ""}
                         </Badge>
-                        <p className="text-lg font-bold text-green-700">
+                        <p className="text-lg font-bold text-slate-900">
                           {asset.assetType === "provident_fund" 
                             ? formatCurrency(calculatePFCurrentValue(asset.data as Record<string, any>).currentValue)
                             : (asset.data as any).investmentMethod && (asset.data as any).investmentMethod !== "Lump sum"
                             ? formatCurrency(calculateMFCurrentValue(asset.data))
                             : formatCurrency(asset.value)}
                         </p>
-                        <div className="mt-2 text-xs text-muted-foreground space-y-0.5">
+                        <div className="mt-3 space-y-1.5 text-[10px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-inner">
                           {Object.entries(asset.data as Record<string, unknown>).map(([k, v]) => {
                             const skip = ["amount", "basicSalary", "dearnessAllowance", "employeeContributionPercent", "employerContributionPercent", "interestRate", "tenureYears", "currentBalance", "salaryGrowth", "includeEPS", "totalContribution", "startDate", "maturityDate", "monthlyInvestment", "investmentAmount", "institutionName", "payoutType"].includes(k);
-                            return !skip && <p key={k}><span className="capitalize">{k.replace(/([A-Z])/g, " $1")}</span>: {String(v)}</p>;
+                            return !skip && (
+                              <div key={k} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-1 border-b border-slate-200/50 last:border-0 gap-1">
+                                <span className="capitalize opacity-60 font-bold text-[9px] uppercase tracking-wider">{k.replace(/([A-Z])/g, " $1")}</span>
+                                <span className="text-slate-700 font-bold break-words sm:text-right flex-1 sm:ml-4">{String(v)}</span>
+                              </div>
+                            );
                           })}
                         </div>
                         {asset.assetType === "mutual_fund" && (asset.data as any).assetName && (
@@ -591,14 +652,14 @@ export default function ClientDetailPage() {
                       </div>
                       {(!isAdmin || selectedMemberId === null) && (
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100" onClick={() => {
                             const data: Record<string, string> = {};
                             Object.entries(asset.data as Record<string, unknown>).forEach(([k, v]) => { data[k] = String(v); });
                             setAssetDialog({ type: asset.assetType, data, editId: asset.id });
                           }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteAsset(asset.id)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => handleDeleteAsset(asset.id)}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -610,19 +671,18 @@ export default function ClientDetailPage() {
             })()}
           </div>
 
-          <hr className="border-t border-muted" />
+          <hr className="border-t border-slate-200" />
 
           {/* Liabilities Section */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-foreground">
+              <h2 className="text-xl font-bold text-slate-900">
                 {selectedMemberId === null ? "My Liabilities" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Liabilities`} 
-                ({liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})
+                <span className="ml-2 text-slate-400 text-sm font-medium">({liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})</span>
               </h2>
               {(!isAdmin || selectedMemberId === null) && (
-                <Button size="sm" variant="destructive" className="gap-2" onClick={() => setLiabilityDialog({ 
+                <Button size="sm" variant="destructive" className="gap-2 shadow-lg shadow-rose-500/20" onClick={() => setLiabilityDialog({ 
                   liabilityType: "Loans", 
-                  // ... rest of empty state
                   loanType: "home_loan", 
                   lenderName: "", 
                   totalLoanAmount: "", 
@@ -662,14 +722,14 @@ export default function ClientDetailPage() {
             </div>
             {(() => {
               const filteredLiabilities = liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
-              if (filteredLiabilities.length === 0) return <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">No liabilities yet</CardContent></Card>;
+              if (filteredLiabilities.length === 0) return <Card className="glass-panel border-slate-200 border-dashed bg-slate-50/50"><CardContent className="py-8 text-center text-slate-400 text-sm">No liabilities yet</CardContent></Card>;
               
               return filteredLiabilities.map((liability) => (
-                <Card key={liability.id}>
-                  <CardContent className="py-4">
+                <Card key={liability.id} className="glass-panel border-slate-100 bg-white hover:bg-slate-50 transition-all shadow-sm">
+                  <CardContent className="p-3 sm:p-6 py-4">
                     <div className="flex items-start justify-between">
                       <div>
-                        <Badge variant="destructive" className="text-xs mb-2">
+                        <Badge variant="destructive" className="text-[10px] mb-2 bg-rose-50 text-rose-600 border-rose-100 uppercase tracking-wider">
                           {(() => {
                             const parts = liability.notes?.split("|") ?? [];
                             const type = parts[0];
@@ -687,8 +747,8 @@ export default function ClientDetailPage() {
                             return type || LOAN_LABELS[liability.loanType];
                           })()}
                         </Badge>
-                        <p className="text-base font-bold text-foreground">{liability.lenderName}</p>
-                        <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                        <p className="text-base font-bold text-slate-900">{liability.lenderName}</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
                           {(() => {
                             const parts = liability.notes?.split("|") ?? [];
                             const type = parts[0];
@@ -698,22 +758,22 @@ export default function ClientDetailPage() {
                               const adv = parts.find(p => p.startsWith("Advance:"))?.split(":")[1] ?? "0";
                               return (
                                 <>
-                                  <p>Net Tax Payable: <span className="text-foreground font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                  <p>Outstanding: <span className="text-red-600 font-medium">{formatCurrency(liability.outstandingAmount)}</span></p>
-                                  <p>Annual Income: <span className="text-foreground font-medium">{formatCurrency(parseFloat(inc))}</span></p>
-                                  <p>TDS Paid: <span className="text-foreground font-medium">{formatCurrency(parseFloat(tds))}</span></p>
-                                  {adv !== "0" && <p>Advance Tax: <span className="text-foreground font-medium">{formatCurrency(parseFloat(adv))}</span></p>}
-                                  {liability.startDate && <p>Due Date: {formatDate(liability.startDate)}</p>}
+                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Net Tax Payable: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Outstanding: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
+                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Annual Income: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(inc))}</span></p>
+                                  <p className="flex justify-between border-b border-slate-200 py-0.5">TDS Paid: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(tds))}</span></p>
+                                  {adv !== "0" && <p className="flex justify-between border-b border-slate-200 py-0.5">Advance Tax: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(adv))}</span></p>}
+                                  {liability.startDate && <p className="flex justify-between last:border-0 py-0.5">Due Date: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
                                 </>
                               );
                             }
                             if (type === "Bills") {
                               return (
                                 <>
-                                  <p>Original Bill: <span className="text-foreground font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                  <p>Current Outstanding: <span className="text-red-600 font-medium">{formatCurrency(liability.outstandingAmount)}</span></p>
-                                  <p>Penalty Rate: <span className="text-foreground font-medium">{liability.interestRate}%</span></p>
-                                  {liability.startDate && <p>Due Date: {formatDate(liability.startDate)}</p>}
+                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Original Bill: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Current Outstanding: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
+                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Penalty Rate: <span className="text-slate-700 font-medium">{liability.interestRate}%</span></p>
+                                  {liability.startDate && <p className="flex justify-between last:border-0 py-0.5">Due Date: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
                                 </>
                               );
                             }
@@ -724,12 +784,12 @@ export default function ClientDetailPage() {
                               const yrs = parts.find(p => p.startsWith("Years:"))?.split(":")[1];
                               return (
                                 <>
-                                  <p>Total Premium: <span className="text-foreground font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                  <p>Amount Due: <span className="text-red-600 font-medium">{formatCurrency(liability.outstandingAmount)}</span></p>
-                                  {prem && <p>Annual Premium: <span className="text-foreground font-medium">{formatCurrency(parseFloat(prem))}</span></p>}
-                                  {yrs && <p>Tenure: <span className="text-foreground font-medium">{yrs} yrs</span></p>}
-                                  {sub && <p>Type: <span className="text-foreground font-medium">{sub}</span></p>}
-                                  {liability.startDate && <p>Start: {formatDate(liability.startDate)}</p>}
+                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Total Premium: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Amount Due: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
+                                  {prem && <p className="flex justify-between border-b border-slate-200 py-0.5">Annual Premium: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(prem))}</span></p>}
+                                  {yrs && <p className="flex justify-between border-b border-slate-200 py-0.5">Tenure: <span className="text-slate-700 font-medium">{yrs} yrs</span></p>}
+                                  {sub && <p className="flex justify-between border-b border-slate-200 py-0.5">Type: <span className="text-slate-700 font-medium">{sub}</span></p>}
+                                  {liability.startDate && <p className="flex justify-between last:border-0 py-0.5">Start: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
                                 </>
                               );
                             }
@@ -737,21 +797,21 @@ export default function ClientDetailPage() {
                                const cat = parts.find(p => p.startsWith("Cat:"))?.split(":")[1];
                                return (
                                  <>
-                                   <p>Monthly Amount: <span className="text-foreground font-bold">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                   {cat && <p>Category: <span className="font-medium">{cat}</span></p>}
-                                   {liability.startDate && <p>Start Date: {formatDate(liability.startDate)}</p>}
-                                   {liability.endDate && <p>End Date: {formatDate(liability.endDate)}</p>}
+                                   <p className="flex justify-between border-b border-slate-200 py-0.5">Monthly Amount: <span className="text-slate-900 font-bold">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                   {cat && <p className="flex justify-between border-b border-slate-200 py-0.5">Category: <span className="text-slate-700 font-medium">{cat}</span></p>}
+                                   {liability.startDate && <p className="flex justify-between border-b border-slate-200 py-0.5">Start Date: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
+                                   {liability.endDate && <p className="flex justify-between last:border-0 py-0.5">End Date: <span className="text-slate-500">{formatDate(liability.endDate)}</span></p>}
                                  </>
                                );
                              }
                             return (
                               <>
-                                <p>Total: <span className="text-foreground font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                <p>Outstanding: <span className="text-red-600 font-medium">{formatCurrency(liability.outstandingAmount)}</span></p>
-                                <p>Interest: <span className="text-foreground font-medium">{liability.interestRate}%</span></p>
-                                <p>EMI: <span className="text-foreground font-medium">{formatCurrency(liability.emi)}</span></p>
-                                {liability.startDate && <p>Start: {formatDate(liability.startDate)}</p>}
-                                {liability.endDate && <p>End: {formatDate(liability.endDate)}</p>}
+                                <p className="flex justify-between border-b border-slate-200 py-0.5">Total: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                <p className="flex justify-between border-b border-slate-200 py-0.5">Outstanding: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
+                                <p className="flex justify-between border-b border-slate-200 py-0.5">Interest: <span className="text-slate-700 font-medium">{liability.interestRate}%</span></p>
+                                <p className="flex justify-between border-b border-slate-200 py-0.5">EMI: <span className="text-slate-700 font-medium">{formatCurrency(liability.emi)}</span></p>
+                                {liability.startDate && <p className="flex justify-between border-b border-slate-200 py-0.5">Start: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
+                                {liability.endDate && <p className="flex justify-between last:border-0 py-0.5">End: <span className="text-slate-500">{formatDate(liability.endDate)}</span></p>}
                               </>
                             );
                           })()}
@@ -762,63 +822,60 @@ export default function ClientDetailPage() {
                       </div>
                       {(!isAdmin || selectedMemberId === null) && (
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => {
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100" onClick={() => {
                             const parts = liability.notes?.split("|") ?? [];
-                            const start = liability.startDate ? new Date(liability.startDate) : null;
-                            const end = liability.endDate ? new Date(liability.endDate) : null;
-                            const months = (start && end) ? (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) : 0;
-                            
+                            const type = parts[0];
                             setLiabilityDialog({
+                              editId: liability.id,
+                              liabilityType: type,
                               loanType: liability.loanType,
-                              liabilityType: parts[0] ?? "Loans",
-                              interestType: liability.notes?.includes("|Flat") ? "Flat" : "Reducing",
-                              subType: parts.length > 1 && parts[parts.length-1] !== "Flat" ? parts[parts.length-1] : "",
                               lenderName: liability.lenderName,
                               totalLoanAmount: String(liability.totalLoanAmount),
                               outstandingAmount: String(liability.outstandingAmount),
                               interestRate: String(liability.interestRate),
                               emi: String(liability.emi),
-                              startDate: liability.startDate ?? "",
-                              endDate: liability.endDate ?? "",
-                              tenure: months > 0 ? (months / 12).toFixed(1) : "",
-                              income: parts.find((p: string) => p.startsWith("Income:"))?.split(":")[1] ?? "",
-                              tds: parts.find((p: string) => p.startsWith("TDS:"))?.split(":")[1] ?? "",
-                              advanceTax: parts.find((p: string) => p.startsWith("Advance:"))?.split(":")[1] ?? "",
-                              standardDeduction: parts.find((p: string) => p.startsWith("StdDed:"))?.split(":")[1] ?? "75000",
-                              insuranceCategory: parts.find((p: string) => p.startsWith("Cat:"))?.split(":")[1] ?? "",
-                              insuranceSubtype: parts.find((p: string) => p.startsWith("Sub:"))?.split(":")[1] ?? "",
+                              startDate: liability.startDate?.split("T")[0] ?? "",
+                              endDate: liability.endDate?.split("T")[0] ?? "",
+                              interestType: parts.includes("Flat") ? "Flat" : "Reducing",
+                              subType: parts[parts.length - 1] === "Flat" ? "" : parts[parts.length - 1],
+                              tenure: "", 
+                              income: parts.find(p => p.startsWith("Income:"))?.split(":")[1] ?? "",
+                              tds: parts.find(p => p.startsWith("TDS:"))?.split(":")[1] ?? "",
+                              advanceTax: parts.find(p => p.startsWith("Advance:"))?.split(":")[1] ?? "",
+                              standardDeduction: parts.find(p => p.startsWith("StdDed:"))?.split(":")[1] ?? "75000",
+                              insuranceCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
+                              insuranceSubtype: parts.find(p => p.startsWith("Sub:"))?.split(":")[1] ?? "",
                               propertyValue: "",
-                              insuranceRate: "",
-                              premium: parts.find((p: string) => p.startsWith("Premium:"))?.split(":")[1] ?? "",
-                              tenureYears: parts.find((p: string) => p.startsWith("Years:"))?.split(":")[1] ?? "",
-                              baseRate: parts.find((p: string) => p.startsWith("Base:"))?.split(":")[1] ?? "",
-                              addOns: parts.find((p: string) => p.startsWith("Addons:"))?.split(":")[1] ?? "",
-                              discounts: parts.find((p: string) => p.startsWith("Disc:"))?.split(":")[1] ?? "",
-                              householdCategory: parts.find((p: string) => p.startsWith("Cat:"))?.split(":")[1] ?? "",
-                              householdAmount: parts.find((p: string) => p.startsWith("Amt:"))?.split(":")[1] ?? "",
-                              rent: parts.find((p: string) => p.startsWith("Rent:"))?.split(":")[1] ?? "",
-                              maintenance: parts.find((p: string) => p.startsWith("Maint:"))?.split(":")[1] ?? "",
-                              taxes: parts.find((p: string) => p.startsWith("Taxes:"))?.split(":")[1] ?? "",
-                              electricity: parts.find((p: string) => p.startsWith("Elec:"))?.split(":")[1] ?? "",
-                              water: parts.find((p: string) => p.startsWith("Water:"))?.split(":")[1] ?? "",
-                              gas: parts.find((p: string) => p.startsWith("Gas:"))?.split(":")[1] ?? "",
-                              internet: parts.find((p: string) => p.startsWith("Net:"))?.split(":")[1] ?? "",
-                              groceries: parts.find((p: string) => p.startsWith("Groc:"))?.split(":")[1] ?? "",
-                              fees: parts.find((p: string) => p.startsWith("Fees:"))?.split(":")[1] ?? "",
-                              books: parts.find((p: string) => p.startsWith("Books:"))?.split(":")[1] ?? "",
-                              academicCosts: parts.find((p: string) => p.startsWith("Acad:"))?.split(":")[1] ?? "",
-                              maidSalary: parts.find((p: string) => p.startsWith("Maid:"))?.split(":")[1] ?? "",
-                              cookSalary: parts.find((p: string) => p.startsWith("Cook:"))?.split(":")[1] ?? "",
-                              serviceCosts: parts.find((p: string) => p.startsWith("Serv:"))?.split(":")[1] ?? "",
-                              medicalBills: parts.find((p: string) => p.startsWith("MedB:"))?.split(":")[1] ?? "",
-                              medicines: parts.find((p: string) => p.startsWith("MedI:"))?.split(":")[1] ?? "",
-                              miscCosts: parts.find((p: string) => p.startsWith("Misc:"))?.split(":")[1] ?? "",
-                              editId: liability.id,
+                              insuranceRate: String(liability.interestRate),
+                              premium: parts.find(p => p.startsWith("Premium:"))?.split(":")[1] ?? "",
+                              tenureYears: parts.find(p => p.startsWith("Years:"))?.split(":")[1] ?? "",
+                              baseRate: parts.find(p => p.startsWith("Base:"))?.split(":")[1] ?? "",
+                              addOns: parts.find(p => p.startsWith("Addons:"))?.split(":")[1] ?? "",
+                              discounts: parts.find(p => p.startsWith("Disc:"))?.split(":")[1] ?? "",
+                              householdCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
+                              householdAmount: parts.find(p => p.startsWith("Amt:"))?.split(":")[1] ?? "",
+                              rent: parts.find(p => p.startsWith("Rent:"))?.split(":")[1] ?? "",
+                              maintenance: parts.find(p => p.startsWith("Maint:"))?.split(":")[1] ?? "",
+                              taxes: parts.find(p => p.startsWith("Taxes:"))?.split(":")[1] ?? "",
+                              electricity: parts.find(p => p.startsWith("Elec:"))?.split(":")[1] ?? "",
+                              water: parts.find(p => p.startsWith("Water:"))?.split(":")[1] ?? "",
+                              gas: parts.find(p => p.startsWith("Gas:"))?.split(":")[1] ?? "",
+                              internet: parts.find(p => p.startsWith("Net:"))?.split(":")[1] ?? "",
+                              groceries: parts.find(p => p.startsWith("Groceries:"))?.split(":")[1] ?? "",
+                              fees: parts.find(p => p.startsWith("Fees:"))?.split(":")[1] ?? "",
+                              books: parts.find(p => p.startsWith("Books:"))?.split(":")[1] ?? "",
+                              academicCosts: parts.find(p => p.startsWith("Acad:"))?.split(":")[1] ?? "",
+                              maidSalary: parts.find(p => p.startsWith("Maid:"))?.split(":")[1] ?? "",
+                              cookSalary: parts.find(p => p.startsWith("Cook:"))?.split(":")[1] ?? "",
+                              serviceCosts: parts.find(p => p.startsWith("Serv:"))?.split(":")[1] ?? "",
+                              medicalBills: parts.find(p => p.startsWith("MedB:"))?.split(":")[1] ?? "",
+                              medicines: parts.find(p => p.startsWith("MedI:"))?.split(":")[1] ?? "",
+                              miscCosts: parts.find(p => p.startsWith("Misc:"))?.split(":")[1] ?? "",
                             });
                           }}>
                             <Pencil className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteLiability(liability.id)}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => { if(confirm("Delete liability?")) deleteLiability.mutateAsync({ clientId: clientId!, liabilityId: liability.id }).then(invalidate); }}>
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>
@@ -838,38 +895,30 @@ export default function ClientDetailPage() {
             <DialogTitle>{assetDialog?.editId ? "Edit Asset" : "Add Asset"}</DialogTitle>
           </DialogHeader>
           {assetDialog && (
-            <div className="space-y-4">
-              {!assetDialog.editId && (
-                <div>
-                  <Label>Asset Type</Label>
-                  <Select value={assetDialog.type} onValueChange={(v) => { setAssetDialog({ type: v, data: {} }); }}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>{ASSET_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
-                  </Select>
-                </div>
-              )}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="col-span-2">
+                <Label className="text-xs">Asset Type</Label>
+                <Select value={assetDialog.type} onValueChange={(v: any) => setAssetDialog({ ...assetDialog, type: v, data: {} })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>{ASSET_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+
               {assetDialog.type === "mutual_fund" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <Label className="text-xs">Asset Name</Label>
-                    <FundAutocomplete
-                      value={assetDialog.data.assetName ?? ""}
-                      onChange={(v) => updateAssetField("assetName", v)}
-                    />
-                  </div>
+                <div className="col-span-2 grid grid-cols-2 gap-3">
+                  <div className="col-span-2"><Label className="text-xs">Asset Name</Label><FundAutocomplete value={assetDialog.data.assetName ?? ""} onChange={(v) => updateAssetField("assetName", v)} /></div>
                   <div className="col-span-2">
                     <Label className="text-xs">Investment Method</Label>
                     <Select value={assetDialog.data.investmentMethod ?? "Lump sum"} onValueChange={(v) => updateAssetField("investmentMethod", v)}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="Lump sum">Lump sum</SelectItem>
-                        <SelectItem value="SIP">SIP (Systematic Investment Plan)</SelectItem>
-                        <SelectItem value="SWP">SWP (Systematic Withdrawal Plan)</SelectItem>
-                        <SelectItem value="STP">STP (Systematic Transfer Plan)</SelectItem>
+                        <SelectItem value="Lump sum">Lump sum / One-time</SelectItem>
+                        <SelectItem value="SIP">SIP (Monthly)</SelectItem>
+                        <SelectItem value="SWP">SWP (Withdrawal)</SelectItem>
+                        <SelectItem value="STP">STP (Transfer)</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
-
                   {(!assetDialog.data.investmentMethod || assetDialog.data.investmentMethod === "Lump sum") ? (
                     <>
                       <div>

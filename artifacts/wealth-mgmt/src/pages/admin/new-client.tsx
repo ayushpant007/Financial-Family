@@ -11,6 +11,29 @@ import { useQueryClient } from "@tanstack/react-query";
 import { ChevronRight, CheckCircle2, Plus, Trash2, ArrowRight } from "lucide-react";
 import { FundAutocomplete } from "@/components/fund-autocomplete";
 import { StockAutocomplete } from "@/components/stock-autocomplete";
+import { ScrollingFeatureShowcase } from "@/components/ui/interactive-scrolling-story-component";
+import { usePageBackground } from "@/hooks/usePageBackground";
+
+const NEW_CLIENT_SLIDES = [
+  {
+    title: "Onboard Clients in Minutes",
+    description: "Set up a new family's complete financial profile — credentials, assets, and liabilities — through a guided two-step wizard.",
+    image: "/assets/step1.png",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+  {
+    title: "Capture Every Asset Class",
+    description: "From mutual funds and stocks to fixed deposits, PPF, EPF, and cash balances — record the full picture of a family's wealth.",
+    image: "/assets/assets.png",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+  {
+    title: "Document All Obligations",
+    description: "Log home loans, car loans, credit cards, insurance dues, and household obligations with auto-calculated EMIs and outstanding amounts.",
+    image: "/assets/security.png",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+];
 
 type Step = "account" | "onboarding";
 
@@ -34,17 +57,17 @@ function MutualFundForm({ data, onChange }: { data: Record<string, string>; onCh
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="col-span-2">
-        <Label className="text-xs">Asset Name</Label>
+        <Label className="text-xs text-slate-700">Asset Name</Label>
         <FundAutocomplete
           value={data.assetName ?? ""}
           onChange={(v) => onChange({ ...data, assetName: v })}
         />
       </div>
       <div className="col-span-2">
-        <Label className="text-xs">Investment Method</Label>
+        <Label className="text-xs text-slate-700">Investment Method</Label>
         <Select value={data.investmentMethod ?? "Lump sum"} onValueChange={(v) => onChange({ ...data, investmentMethod: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
+          <SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-white border-slate-200">
             <SelectItem value="Lump sum">Lump sum</SelectItem>
             <SelectItem value="SIP">SIP (Systematic Investment Plan)</SelectItem>
             <SelectItem value="SWP">SWP (Systematic Withdrawal Plan)</SelectItem>
@@ -56,52 +79,52 @@ function MutualFundForm({ data, onChange }: { data: Record<string, string>; onCh
       {(!data.investmentMethod || data.investmentMethod === "Lump sum") ? (
         <>
           <div>
-            <Label className="text-xs">Transaction Type</Label>
+            <Label className="text-xs text-slate-700">Transaction Type</Label>
             <Select value={data.transactionType ?? "Buy"} onValueChange={(v) => onChange({ ...data, transactionType: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent><SelectItem value="Buy">Buy</SelectItem><SelectItem value="Sell">Sell</SelectItem></SelectContent>
+              <SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue /></SelectTrigger>
+              <SelectContent className="bg-white border-slate-200"><SelectItem value="Buy">Buy</SelectItem><SelectItem value="Sell">Sell</SelectItem></SelectContent>
             </Select>
           </div>
-          <div><Label className="text-xs">Date</Label><Input type="date" value={data.date ?? ""} onChange={(e) => onChange({ ...data, date: e.target.value })} /></div>
-          <div><Label className="text-xs">Units</Label><Input type="number" placeholder="0" value={data.units ?? ""} onChange={(e) => {
+          <div><Label className="text-xs text-slate-700">Date</Label><Input type="date" className="bg-white border-slate-200 text-slate-900" value={data.date ?? ""} onChange={(e) => onChange({ ...data, date: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Units</Label><Input type="number" placeholder="0" className="bg-white border-slate-200 text-slate-900" value={data.units ?? ""} onChange={(e) => {
             const units = e.target.value;
             const price = data.price ?? "0";
             onChange({ ...data, units, amount: (parseFloat(units || "0") * parseFloat(price || "0")).toFixed(2) });
           }} /></div>
-          <div><Label className="text-xs">Price per Unit</Label><Input type="number" placeholder="0.00" value={data.price ?? ""} onChange={(e) => {
+          <div><Label className="text-xs text-slate-700">Price per Unit</Label><Input type="number" placeholder="0.00" className="bg-white border-slate-200 text-slate-900" value={data.price ?? ""} onChange={(e) => {
             const price = e.target.value;
             const units = data.units ?? "0";
             onChange({ ...data, price, amount: (parseFloat(units || "0") * parseFloat(price || "0")).toFixed(2) });
           }} /></div>
           <div className="col-span-2">
-            <Label className="text-xs">Amount (auto-calculated)</Label>
-            <Input readOnly value={data.amount ?? "0.00"} className="bg-muted text-foreground font-medium" />
+            <Label className="text-xs text-slate-700">Amount (auto-calculated)</Label>
+            <Input readOnly value={data.amount ?? "0.00"} className="bg-slate-50 text-slate-900 font-medium border-slate-200" />
           </div>
         </>
       ) : data.investmentMethod === "SIP" ? (
         <>
-          <div><Label className="text-xs">Monthly SIP Amount</Label><Input type="number" placeholder="5000" value={data.monthlyInvestment ?? ""} onChange={(e) => onChange({ ...data, monthlyInvestment: e.target.value })} /></div>
-          <div><Label className="text-xs">Expected Return (%)</Label><Input type="number" placeholder="12" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
-          <div><Label className="text-xs">Start Date</Label><Input type="date" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
-          <div><Label className="text-xs">Duration (years)</Label><Input type="number" placeholder="10" value={data.tenureYears ?? ""} onChange={(e) => onChange({ ...data, tenureYears: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Monthly SIP Amount</Label><Input type="number" placeholder="5000" className="bg-white border-slate-200 text-slate-900" value={data.monthlyInvestment ?? ""} onChange={(e) => onChange({ ...data, monthlyInvestment: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Expected Return (%)</Label><Input type="number" placeholder="12" className="bg-white border-slate-200 text-slate-900" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Start Date</Label><Input type="date" className="bg-white border-slate-200 text-slate-900" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Duration (years)</Label><Input type="number" placeholder="10" className="bg-white border-slate-200 text-slate-900" value={data.tenureYears ?? ""} onChange={(e) => onChange({ ...data, tenureYears: e.target.value })} /></div>
         </>
       ) : data.investmentMethod === "SWP" ? (
         <>
-          <div><Label className="text-xs">Initial Investment</Label><Input type="number" placeholder="1000000" value={data.investmentAmount ?? ""} onChange={(e) => onChange({ ...data, investmentAmount: e.target.value })} /></div>
-          <div><Label className="text-xs">Monthly Withdrawal</Label><Input type="number" placeholder="10000" value={data.monthlyWithdrawal ?? ""} onChange={(e) => onChange({ ...data, monthlyWithdrawal: e.target.value })} /></div>
-          <div><Label className="text-xs">Expected Return (%)</Label><Input type="number" placeholder="8" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
-          <div><Label className="text-xs">Start Date</Label><Input type="date" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
-          <div><Label className="text-xs">Duration (years)</Label><Input type="number" placeholder="10" value={data.tenureYears ?? ""} onChange={(e) => onChange({ ...data, tenureYears: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Initial Investment</Label><Input type="number" placeholder="1000000" className="bg-white border-slate-200 text-slate-900" value={data.investmentAmount ?? ""} onChange={(e) => onChange({ ...data, investmentAmount: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Monthly Withdrawal</Label><Input type="number" placeholder="10000" className="bg-white border-slate-200 text-slate-900" value={data.monthlyWithdrawal ?? ""} onChange={(e) => onChange({ ...data, monthlyWithdrawal: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Expected Return (%)</Label><Input type="number" placeholder="8" className="bg-white border-slate-200 text-slate-900" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Start Date</Label><Input type="date" className="bg-white border-slate-200 text-slate-900" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Duration (years)</Label><Input type="number" placeholder="10" className="bg-white border-slate-200 text-slate-900" value={data.tenureYears ?? ""} onChange={(e) => onChange({ ...data, tenureYears: e.target.value })} /></div>
         </>
       ) : (
         <>
-          <div className="col-span-2"><Label className="text-xs">Target Fund Name</Label><Input placeholder="Fund to transfer into..." value={data.targetFundName ?? ""} onChange={(e) => onChange({ ...data, targetFundName: e.target.value })} /></div>
-          <div><Label className="text-xs">Source Investment</Label><Input type="number" placeholder="500000" value={data.investmentAmount ?? ""} onChange={(e) => onChange({ ...data, investmentAmount: e.target.value })} /></div>
-          <div><Label className="text-xs">Monthly Transfer</Label><Input type="number" placeholder="5000" value={data.monthlyTransfer ?? ""} onChange={(e) => onChange({ ...data, monthlyTransfer: e.target.value })} /></div>
-          <div><Label className="text-xs">Source Return (%)</Label><Input type="number" placeholder="6" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
-          <div><Label className="text-xs">Target Return (%)</Label><Input type="number" placeholder="12" value={data.targetInterestRate ?? ""} onChange={(e) => onChange({ ...data, targetInterestRate: e.target.value })} /></div>
-          <div><Label className="text-xs">Start Date</Label><Input type="date" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
-          <div><Label className="text-xs">Duration (years)</Label><Input type="number" placeholder="5" value={data.tenureYears ?? ""} onChange={(e) => onChange({ ...data, tenureYears: e.target.value })} /></div>
+          <div className="col-span-2"><Label className="text-xs text-slate-700">Target Fund Name</Label><Input placeholder="Fund to transfer into..." className="bg-white border-slate-200 text-slate-900" value={data.targetFundName ?? ""} onChange={(e) => onChange({ ...data, targetFundName: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Source Investment</Label><Input type="number" placeholder="500000" className="bg-white border-slate-200 text-slate-900" value={data.investmentAmount ?? ""} onChange={(e) => onChange({ ...data, investmentAmount: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Monthly Transfer</Label><Input type="number" placeholder="5000" className="bg-white border-slate-200 text-slate-900" value={data.monthlyTransfer ?? ""} onChange={(e) => onChange({ ...data, monthlyTransfer: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Source Return (%)</Label><Input type="number" placeholder="6" className="bg-white border-slate-200 text-slate-900" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Target Return (%)</Label><Input type="number" placeholder="12" className="bg-white border-slate-200 text-slate-900" value={data.targetInterestRate ?? ""} onChange={(e) => onChange({ ...data, targetInterestRate: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Start Date</Label><Input type="date" className="bg-white border-slate-200 text-slate-900" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Duration (years)</Label><Input type="number" placeholder="5" className="bg-white border-slate-200 text-slate-900" value={data.tenureYears ?? ""} onChange={(e) => onChange({ ...data, tenureYears: e.target.value })} /></div>
         </>
       )}
     </div>
@@ -112,42 +135,42 @@ function StockForm({ data, onChange }: { data: Record<string, string>; onChange:
   return (
     <div className="grid grid-cols-2 gap-3">
       <div className="col-span-2">
-        <Label className="text-xs">Asset Name</Label>
+        <Label className="text-xs text-slate-700">Asset Name</Label>
         <StockAutocomplete
           value={data.assetName ?? ""}
           onChange={(v) => onChange({ ...data, assetName: v })}
         />
       </div>
       <div>
-        <Label className="text-xs">Transaction Type</Label>
+        <Label className="text-xs text-slate-700">Transaction Type</Label>
         <Select value={data.transactionType ?? "Buy"} onValueChange={(v) => onChange({ ...data, transactionType: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="Buy">Buy</SelectItem><SelectItem value="Sell">Sell</SelectItem></SelectContent>
+          <SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-white border-slate-200"><SelectItem value="Buy">Buy</SelectItem><SelectItem value="Sell">Sell</SelectItem></SelectContent>
         </Select>
       </div>
       <div>
-        <Label className="text-xs">Date</Label>
-        <Input type="date" value={data.date ?? ""} onChange={(e) => onChange({ ...data, date: e.target.value })} />
+        <Label className="text-xs text-slate-700">Date</Label>
+        <Input type="date" className="bg-white border-slate-200 text-slate-900" value={data.date ?? ""} onChange={(e) => onChange({ ...data, date: e.target.value })} />
       </div>
       <div>
-        <Label className="text-xs">Units</Label>
-        <Input type="number" placeholder="0" value={data.units ?? ""} onChange={(e) => {
+        <Label className="text-xs text-slate-700">Units</Label>
+        <Input type="number" placeholder="0" className="bg-white border-slate-200 text-slate-900" value={data.units ?? ""} onChange={(e) => {
           const units = e.target.value;
           const price = data.price ?? "0";
           onChange({ ...data, units, amount: (parseFloat(units || "0") * parseFloat(price || "0")).toFixed(2) });
         }} />
       </div>
       <div>
-        <Label className="text-xs">Price per Share</Label>
-        <Input type="number" placeholder="0.00" value={data.price ?? ""} onChange={(e) => {
+        <Label className="text-xs text-slate-700">Price per Share</Label>
+        <Input type="number" placeholder="0.00" className="bg-white border-slate-200 text-slate-900" value={data.price ?? ""} onChange={(e) => {
           const price = e.target.value;
           const units = data.units ?? "0";
           onChange({ ...data, price, amount: (parseFloat(units || "0") * parseFloat(price || "0")).toFixed(2) });
         }} />
       </div>
       <div className="col-span-2">
-        <Label className="text-xs">Amount (auto-calculated)</Label>
-        <Input readOnly value={data.amount ?? "0.00"} className="bg-muted text-foreground font-medium" />
+        <Label className="text-xs text-slate-700">Amount (auto-calculated)</Label>
+        <Input readOnly value={data.amount ?? "0.00"} className="bg-slate-50 text-slate-900 font-medium border-slate-200" />
       </div>
     </div>
   );
@@ -156,16 +179,16 @@ function StockForm({ data, onChange }: { data: Record<string, string>; onChange:
 function FDForm({ data, onChange }: { data: Record<string, string>; onChange: (d: Record<string, string>) => void }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <div className="col-span-2"><Label className="text-xs">Institution Name</Label><Input placeholder="e.g. SBI Bank" value={data.institutionName ?? ""} onChange={(e) => onChange({ ...data, institutionName: e.target.value })} /></div>
-      <div><Label className="text-xs">Investment Amount</Label><Input type="number" placeholder="0" value={data.investmentAmount ?? ""} onChange={(e) => onChange({ ...data, investmentAmount: e.target.value })} /></div>
-      <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" placeholder="7.5" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
-      <div><Label className="text-xs">Start Date</Label><Input type="date" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
-      <div><Label className="text-xs">Maturity Date</Label><Input type="date" value={data.maturityDate ?? ""} onChange={(e) => onChange({ ...data, maturityDate: e.target.value })} /></div>
+      <div className="col-span-2"><Label className="text-xs text-slate-700">Institution Name</Label><Input placeholder="e.g. SBI Bank" className="bg-white border-slate-200 text-slate-900" value={data.institutionName ?? ""} onChange={(e) => onChange({ ...data, institutionName: e.target.value })} /></div>
+      <div><Label className="text-xs text-slate-700">Investment Amount</Label><Input type="number" placeholder="0" className="bg-white border-slate-200 text-slate-900" value={data.investmentAmount ?? ""} onChange={(e) => onChange({ ...data, investmentAmount: e.target.value })} /></div>
+      <div><Label className="text-xs text-slate-700">Interest Rate (%)</Label><Input type="number" placeholder="7.5" className="bg-white border-slate-200 text-slate-900" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
+      <div><Label className="text-xs text-slate-700">Start Date</Label><Input type="date" className="bg-white border-slate-200 text-slate-900" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
+      <div><Label className="text-xs text-slate-700">Maturity Date</Label><Input type="date" className="bg-white border-slate-200 text-slate-900" value={data.maturityDate ?? ""} onChange={(e) => onChange({ ...data, maturityDate: e.target.value })} /></div>
       <div className="col-span-2">
-        <Label className="text-xs">Payout Type</Label>
+        <Label className="text-xs text-slate-700">Payout Type</Label>
         <Select value={data.payoutType ?? "Cumulative"} onValueChange={(v) => onChange({ ...data, payoutType: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="Cumulative">Cumulative</SelectItem><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="Quarterly">Quarterly</SelectItem></SelectContent>
+          <SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-white border-slate-200"><SelectItem value="Cumulative">Cumulative</SelectItem><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="Quarterly">Quarterly</SelectItem></SelectContent>
         </Select>
       </div>
     </div>
@@ -175,11 +198,11 @@ function FDForm({ data, onChange }: { data: Record<string, string>; onChange: (d
 function RDForm({ data, onChange }: { data: Record<string, string>; onChange: (d: Record<string, string>) => void }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <div className="col-span-2"><Label className="text-xs">Institution Name</Label><Input placeholder="e.g. HDFC Bank" value={data.institutionName ?? ""} onChange={(e) => onChange({ ...data, institutionName: e.target.value })} /></div>
-      <div><Label className="text-xs">Monthly Investment</Label><Input type="number" placeholder="5000" value={data.monthlyInvestment ?? ""} onChange={(e) => onChange({ ...data, monthlyInvestment: e.target.value })} /></div>
-      <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" placeholder="6.5" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
-      <div><Label className="text-xs">Start Date</Label><Input type="date" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
-      <div><Label className="text-xs">Tenure (months)</Label><Input type="number" placeholder="12" value={data.tenure ?? ""} onChange={(e) => onChange({ ...data, tenure: e.target.value })} /></div>
+      <div className="col-span-2"><Label className="text-xs text-slate-700">Institution Name</Label><Input placeholder="e.g. HDFC Bank" className="bg-white border-slate-200 text-slate-900" value={data.institutionName ?? ""} onChange={(e) => onChange({ ...data, institutionName: e.target.value })} /></div>
+      <div><Label className="text-xs text-slate-700">Monthly Investment</Label><Input type="number" placeholder="5000" className="bg-white border-slate-200 text-slate-900" value={data.monthlyInvestment ?? ""} onChange={(e) => onChange({ ...data, monthlyInvestment: e.target.value })} /></div>
+      <div><Label className="text-xs text-slate-700">Interest Rate (%)</Label><Input type="number" placeholder="6.5" className="bg-white border-slate-200 text-slate-900" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
+      <div><Label className="text-xs text-slate-700">Start Date</Label><Input type="date" className="bg-white border-slate-200 text-slate-900" value={data.startDate ?? ""} onChange={(e) => onChange({ ...data, startDate: e.target.value })} /></div>
+      <div><Label className="text-xs text-slate-700">Tenure (months)</Label><Input type="number" placeholder="12" className="bg-white border-slate-200 text-slate-900" value={data.tenure ?? ""} onChange={(e) => onChange({ ...data, tenure: e.target.value })} /></div>
     </div>
   );
 }
@@ -188,19 +211,20 @@ function PPFForm({ data, onChange }: { data: Record<string, string>; onChange: (
   return (
     <div className="grid grid-cols-2 gap-3">
       <div>
-        <Label className="text-xs">Account Type</Label>
+        <Label className="text-xs text-slate-700">Account Type</Label>
         <Select value={data.accountType ?? "PPF"} onValueChange={(v) => onChange({ ...data, accountType: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="PPF">PPF</SelectItem><SelectItem value="EPF">EPF</SelectItem></SelectContent>
+          <SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-white border-slate-200"><SelectItem value="PPF">PPF</SelectItem><SelectItem value="EPF">EPF</SelectItem></SelectContent>
         </Select>
       </div>
       {data.accountType === "EPF" ? (
         <>
           <div>
-            <Label className="text-xs">Your Age</Label>
+            <Label className="text-xs text-slate-700">Your Age</Label>
             <Input 
               type="number" 
               placeholder="e.g. 30" 
+              className="bg-white border-slate-200 text-slate-900"
               value={data.age ?? ""} 
               onChange={(e) => {
                 const age = parseInt(e.target.value) || 0;
@@ -212,19 +236,19 @@ function PPFForm({ data, onChange }: { data: Record<string, string>; onChange: (
               }} 
             />
           </div>
-          <div><Label className="text-xs">Basic Salary (monthly)</Label><Input type="number" value={data.basicSalary ?? ""} onChange={(e) => onChange({ ...data, basicSalary: e.target.value })} /></div>
-          <div><Label className="text-xs">Dearness Allowance (monthly)</Label><Input type="number" value={data.dearnessAllowance ?? ""} onChange={(e) => onChange({ ...data, dearnessAllowance: e.target.value })} /></div>
-          <div><Label className="text-xs">Contribution (%)</Label><Input type="number" placeholder="12" value={data.employeeContributionPercent ?? ""} onChange={(e) => onChange({ ...data, employeeContributionPercent: e.target.value })} /></div>
-          <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" placeholder="8.15" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
-          <div><Label className="text-xs">Investment Duration (years)</Label><Input type="number" value={data.tenureYears ?? ""} onChange={(e) => onChange({ ...data, tenureYears: e.target.value })} /></div>
-          <div><Label className="text-xs">Current EPF Balance (optional)</Label><Input type="number" value={data.currentBalance ?? ""} onChange={(e) => onChange({ ...data, currentBalance: e.target.value })} /></div>
-          <div><Label className="text-xs">Annual increase in salary (%) (optional)</Label><Input type="number" value={data.salaryGrowth ?? ""} onChange={(e) => onChange({ ...data, salaryGrowth: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Basic Salary (monthly)</Label><Input type="number" className="bg-white border-slate-200 text-slate-900" value={data.basicSalary ?? ""} onChange={(e) => onChange({ ...data, basicSalary: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Dearness Allowance (monthly)</Label><Input type="number" className="bg-white border-slate-200 text-slate-900" value={data.dearnessAllowance ?? ""} onChange={(e) => onChange({ ...data, dearnessAllowance: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Contribution (%)</Label><Input type="number" placeholder="12" className="bg-white border-slate-200 text-slate-900" value={data.employeeContributionPercent ?? ""} onChange={(e) => onChange({ ...data, employeeContributionPercent: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Interest Rate (%)</Label><Input type="number" placeholder="8.15" className="bg-white border-slate-200 text-slate-900" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Investment Duration (years)</Label><Input type="number" className="bg-white border-slate-200 text-slate-900" value={data.tenureYears ?? ""} onChange={(e) => onChange({ ...data, tenureYears: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Current EPF Balance (optional)</Label><Input type="number" className="bg-white border-slate-200 text-slate-900" value={data.currentBalance ?? ""} onChange={(e) => onChange({ ...data, currentBalance: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Annual increase in salary (%) (optional)</Label><Input type="number" className="bg-white border-slate-200 text-slate-900" value={data.salaryGrowth ?? ""} onChange={(e) => onChange({ ...data, salaryGrowth: e.target.value })} /></div>
         </>
       ) : (
         <>
-          <div><Label className="text-xs">Start Year</Label><Input type="number" placeholder="2020" value={data.startYear ?? ""} onChange={(e) => onChange({ ...data, startYear: e.target.value })} /></div>
-          <div><Label className="text-xs">Total Contribution</Label><Input type="number" placeholder="0" value={data.totalContribution ?? ""} onChange={(e) => onChange({ ...data, totalContribution: e.target.value })} /></div>
-          <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" placeholder="8.15" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Start Year</Label><Input type="number" placeholder="2020" className="bg-white border-slate-200 text-slate-900" value={data.startYear ?? ""} onChange={(e) => onChange({ ...data, startYear: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Total Contribution</Label><Input type="number" placeholder="0" className="bg-white border-slate-200 text-slate-900" value={data.totalContribution ?? ""} onChange={(e) => onChange({ ...data, totalContribution: e.target.value })} /></div>
+          <div><Label className="text-xs text-slate-700">Interest Rate (%)</Label><Input type="number" placeholder="8.15" className="bg-white border-slate-200 text-slate-900" value={data.interestRate ?? ""} onChange={(e) => onChange({ ...data, interestRate: e.target.value })} /></div>
         </>
       )}
     </div>
@@ -234,15 +258,15 @@ function PPFForm({ data, onChange }: { data: Record<string, string>; onChange: (
 function CashBankForm({ data, onChange }: { data: Record<string, string>; onChange: (d: Record<string, string>) => void }) {
   return (
     <div className="grid grid-cols-2 gap-3">
-      <div><Label className="text-xs">Bank Name</Label><Input placeholder="e.g. ICICI Bank" value={data.bankName ?? ""} onChange={(e) => onChange({ ...data, bankName: e.target.value })} /></div>
+      <div><Label className="text-xs text-slate-700">Bank Name</Label><Input placeholder="e.g. ICICI Bank" className="bg-white border-slate-200 text-slate-900" value={data.bankName ?? ""} onChange={(e) => onChange({ ...data, bankName: e.target.value })} /></div>
       <div>
-        <Label className="text-xs">Account Type</Label>
+        <Label className="text-xs text-slate-700">Account Type</Label>
         <Select value={data.accountType ?? "Savings"} onValueChange={(v) => onChange({ ...data, accountType: v })}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent><SelectItem value="Savings">Savings</SelectItem><SelectItem value="Current">Current</SelectItem><SelectItem value="FD">Fixed Deposit</SelectItem></SelectContent>
+          <SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue /></SelectTrigger>
+          <SelectContent className="bg-white border-slate-200"><SelectItem value="Savings">Savings</SelectItem><SelectItem value="Current">Current</SelectItem><SelectItem value="FD">Fixed Deposit</SelectItem></SelectContent>
         </Select>
       </div>
-      <div className="col-span-2"><Label className="text-xs">Current Balance</Label><Input type="number" placeholder="0" value={data.currentBalance ?? ""} onChange={(e) => onChange({ ...data, currentBalance: e.target.value })} /></div>
+      <div className="col-span-2"><Label className="text-xs text-slate-700">Current Balance</Label><Input type="number" placeholder="0" className="bg-white border-slate-200 text-slate-900" value={data.currentBalance ?? ""} onChange={(e) => onChange({ ...data, currentBalance: e.target.value })} /></div>
     </div>
   );
 }
@@ -284,6 +308,8 @@ export default function NewClientPage() {
   const createClient = useCreateClient();
   const createAsset = useCreateClientAsset();
   const createLiability = useCreateClientLiability();
+
+  usePageBackground('light');
 
   const handleCreateAccount = (e: React.FormEvent) => {
     e.preventDefault();
@@ -353,59 +379,63 @@ export default function NewClientPage() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto space-y-6">
+        <ScrollingFeatureShowcase
+          slides={NEW_CLIENT_SLIDES}
+          height="380px"
+        />
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Add New Client</h1>
-          <p className="text-sm text-muted-foreground mt-1">Create account then fill in financial details</p>
+          <h1 className="text-2xl font-bold text-slate-900">Add New Client</h1>
+          <p className="text-sm text-slate-500 mt-1">Create account then fill in financial details</p>
         </div>
 
         <div className="flex items-center gap-3 mb-6">
-          <div className={`flex items-center gap-2 text-sm font-medium ${step === "account" ? "text-primary" : "text-muted-foreground"}`}>
-            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${step === "account" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground"}`}>
-              {step === "onboarding" ? <CheckCircle2 className="h-4 w-4 text-green-600" /> : "1"}
+          <div className={`flex items-center gap-2 text-sm font-medium ${step === "account" ? "text-primary" : "text-slate-400"}`}>
+            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${step === "account" ? "bg-primary text-white" : "bg-slate-100 text-slate-400"}`}>
+              {step === "onboarding" ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : "1"}
             </div>
             Account
           </div>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-          <div className={`flex items-center gap-2 text-sm font-medium ${step === "onboarding" ? "text-primary" : "text-muted-foreground"}`}>
-            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${step === "onboarding" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>2</div>
+          <ChevronRight className="h-4 w-4 text-slate-200" />
+          <div className={`flex items-center gap-2 text-sm font-medium ${step === "onboarding" ? "text-primary" : "text-slate-400"}`}>
+            <div className={`h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold ${step === "onboarding" ? "bg-primary text-white" : "bg-slate-100"}`}>2</div>
             Financial Details
           </div>
         </div>
 
         {step === "account" && (
-          <Card>
+          <Card className="glass-panel border-slate-200 bg-white/60">
             <CardHeader>
-              <CardTitle className="text-base">Client Account Details</CardTitle>
-              <CardDescription>Create login credentials for the client</CardDescription>
+              <CardTitle className="text-base text-slate-900">Client Account Details</CardTitle>
+              <CardDescription className="text-slate-500 text-xs">Create login credentials for the client</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={handleCreateAccount} className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2 space-y-2">
-                    <Label>Full Name *</Label>
-                    <Input placeholder="Client full name" value={name} onChange={(e) => setName(e.target.value)} required />
+                    <Label className="text-slate-700">Full Name *</Label>
+                    <Input placeholder="Client full name" value={name} onChange={(e) => setName(e.target.value)} required className="bg-white border-slate-200 text-slate-900" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Email</Label>
-                    <Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+                    <Label className="text-slate-700">Email</Label>
+                    <Input type="email" placeholder="email@example.com" value={email} onChange={(e) => setEmail(e.target.value)} className="bg-white border-slate-200 text-slate-900" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Phone</Label>
-                    <Input placeholder="+91-..." value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    <Label className="text-slate-700">Phone</Label>
+                    <Input placeholder="+91-..." value={phone} onChange={(e) => setPhone(e.target.value)} className="bg-white border-slate-200 text-slate-900" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Username *</Label>
-                    <Input placeholder="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
+                    <Label className="text-slate-700">Username *</Label>
+                    <Input placeholder="username" value={username} onChange={(e) => setUsername(e.target.value)} required className="bg-white border-slate-200 text-slate-900" />
                   </div>
                   <div className="space-y-2">
-                    <Label>Password *</Label>
-                    <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                    <Label className="text-slate-700">Password *</Label>
+                    <Input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required className="bg-white border-slate-200 text-slate-900" />
                   </div>
                 </div>
                 {createClient.isError && (
-                  <p className="text-sm text-destructive">Error creating client. Username may already be taken.</p>
+                  <p className="text-sm text-rose-500">Error creating client. Username may already be taken.</p>
                 )}
-                <Button type="submit" className="w-full gap-2" disabled={createClient.isPending}>
+                <Button type="submit" className="w-full gap-2 shadow-lg shadow-primary/20 h-11" disabled={createClient.isPending}>
                   {createClient.isPending ? "Creating..." : "Create Account"}
                   {!createClient.isPending && <ChevronRight className="h-4 w-4" />}
                 </Button>
@@ -416,41 +446,41 @@ export default function NewClientPage() {
 
         {step === "onboarding" && (
           <div className="space-y-6">
-            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
-              <p className="text-sm font-medium text-green-800">Account created for {clientName}</p>
-              <p className="text-xs text-green-600 mt-0.5">Now add their financial data below (or skip to do it later)</p>
+            <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-4 py-3">
+              <p className="text-sm font-medium text-emerald-700">Account created for {clientName}</p>
+              <p className="text-xs text-emerald-600/80 mt-0.5">Now add their financial data below (or skip to do it later)</p>
             </div>
 
-            <Card>
+            <Card className="glass-panel border-slate-200 bg-white/60">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <div>
-                  <CardTitle className="text-base">Assets</CardTitle>
-                  <CardDescription className="text-xs">Add investments and holdings</CardDescription>
+                  <CardTitle className="text-base text-slate-900">Assets</CardTitle>
+                  <CardDescription className="text-xs text-slate-500">Add investments and holdings</CardDescription>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={addAsset} className="gap-1">
+                <Button type="button" variant="outline" size="sm" onClick={addAsset} className="gap-1 border-slate-200 hover:bg-slate-50 text-slate-600">
                   <Plus className="h-4 w-4" /> Add Asset
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 {assets.length === 0 && (
-                  <p className="text-sm text-muted-foreground py-4 text-center">No assets added yet. Click "Add Asset" to add one.</p>
+                  <p className="text-sm text-slate-400 py-4 text-center">No assets added yet. Click "Add Asset" to add one.</p>
                 )}
                 {assets.map((asset, i) => (
-                  <div key={i} className="border rounded-lg p-4 space-y-3">
+                  <div key={i} className="border border-slate-100 rounded-lg p-4 space-y-3 bg-white shadow-sm">
                     <div className="flex items-center justify-between">
                       <Select value={asset.type} onValueChange={(v) => {
                         const updated = [...assets];
                         updated[i] = { type: v, data: {} };
                         setAssets(updated);
                       }}>
-                        <SelectTrigger className="w-56">
+                        <SelectTrigger className="w-56 bg-white border-slate-200 text-slate-900">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="bg-white border-slate-200">
                           {ASSET_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
                         </SelectContent>
                       </Select>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeAsset(i)} className="text-destructive h-8 w-8">
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeAsset(i)} className="text-rose-500 hover:bg-rose-50 h-8 w-8">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -465,43 +495,43 @@ export default function NewClientPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="glass-panel border-slate-200 bg-white/60">
               <CardHeader className="flex flex-row items-center justify-between pb-3">
                 <div>
-                  <CardTitle className="text-base">Liabilities</CardTitle>
-                  <CardDescription className="text-xs">Add loans and outstanding debts</CardDescription>
+                  <CardTitle className="text-base text-slate-900">Liabilities</CardTitle>
+                  <CardDescription className="text-xs text-slate-500">Add loans and outstanding debts</CardDescription>
                 </div>
-                <Button type="button" variant="outline" size="sm" onClick={addLiability} className="gap-1">
+                <Button type="button" variant="outline" size="sm" onClick={addLiability} className="gap-1 border-slate-200 hover:bg-slate-50 text-slate-600">
                   <Plus className="h-4 w-4" /> Add Liability
                 </Button>
               </CardHeader>
               <CardContent className="space-y-4">
                 {liabilities.length === 0 && (
-                  <p className="text-sm text-muted-foreground py-4 text-center">No liabilities added yet.</p>
+                  <p className="text-sm text-slate-400 py-4 text-center">No liabilities added yet.</p>
                 )}
                 {liabilities.map((liability, i) => (
-                  <div key={i} className="border rounded-lg p-4 space-y-3">
+                  <div key={i} className="border border-slate-100 rounded-lg p-4 space-y-3 bg-white shadow-sm">
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium">Loan #{i + 1}</p>
-                      <Button type="button" variant="ghost" size="icon" onClick={() => removeLiability(i)} className="text-destructive h-8 w-8">
+                      <p className="text-sm font-medium text-slate-900">Loan #{i + 1}</p>
+                      <Button type="button" variant="ghost" size="icon" onClick={() => removeLiability(i)} className="text-rose-500 hover:bg-rose-50 h-8 w-8">
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <Label className="text-xs">Loan Type</Label>
+                        <Label className="text-xs text-slate-700">Loan Type</Label>
                         <Select value={liability.loanType} onValueChange={(v) => { const l = [...liabilities]; l[i] = { ...l[i], loanType: v }; setLiabilities(l); }}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>{LOAN_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                          <SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-white border-slate-200">{LOAN_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
                         </Select>
                       </div>
-                      <div><Label className="text-xs">Lender Name</Label><Input placeholder="e.g. HDFC Bank" value={liability.lenderName} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], lenderName: e.target.value }; setLiabilities(l); }} /></div>
-                      <div><Label className="text-xs">Total Loan Amount</Label><Input type="number" placeholder="0" value={liability.totalLoanAmount} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], totalLoanAmount: e.target.value }; setLiabilities(l); }} /></div>
-                      <div><Label className="text-xs">Outstanding Amount</Label><Input type="number" placeholder="0" value={liability.outstandingAmount} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], outstandingAmount: e.target.value }; setLiabilities(l); }} /></div>
-                      <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" placeholder="8.5" value={liability.interestRate} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], interestRate: e.target.value }; setLiabilities(l); }} /></div>
-                      <div><Label className="text-xs">EMI</Label><Input type="number" placeholder="0" value={liability.emi} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], emi: e.target.value }; setLiabilities(l); }} /></div>
-                      <div><Label className="text-xs">Start Date</Label><Input type="date" value={liability.startDate} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], startDate: e.target.value }; setLiabilities(l); }} /></div>
-                      <div><Label className="text-xs">End Date</Label><Input type="date" value={liability.endDate} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], endDate: e.target.value }; setLiabilities(l); }} /></div>
+                      <div><Label className="text-xs text-slate-700">Lender Name</Label><Input placeholder="e.g. HDFC Bank" value={liability.lenderName} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], lenderName: e.target.value }; setLiabilities(l); }} className="bg-white border-slate-200 text-slate-900" /></div>
+                      <div><Label className="text-xs text-slate-700">Total Loan Amount</Label><Input type="number" placeholder="0" value={liability.totalLoanAmount} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], totalLoanAmount: e.target.value }; setLiabilities(l); }} className="bg-white border-slate-200 text-slate-900" /></div>
+                      <div><Label className="text-xs text-slate-700">Outstanding Amount</Label><Input type="number" placeholder="0" value={liability.outstandingAmount} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], outstandingAmount: e.target.value }; setLiabilities(l); }} className="bg-white border-slate-200 text-slate-900" /></div>
+                      <div><Label className="text-xs text-slate-700">Interest Rate (%)</Label><Input type="number" placeholder="8.5" value={liability.interestRate} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], interestRate: e.target.value }; setLiabilities(l); }} className="bg-white border-slate-200 text-slate-900" /></div>
+                      <div><Label className="text-xs text-slate-700">EMI</Label><Input type="number" placeholder="0" value={liability.emi} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], emi: e.target.value }; setLiabilities(l); }} className="bg-white border-slate-200 text-slate-900" /></div>
+                      <div><Label className="text-xs text-slate-700">Start Date</Label><Input type="date" value={liability.startDate} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], startDate: e.target.value }; setLiabilities(l); }} className="bg-white border-slate-200 text-slate-900" /></div>
+                      <div><Label className="text-xs text-slate-700">End Date</Label><Input type="date" value={liability.endDate} onChange={(e) => { const l = [...liabilities]; l[i] = { ...l[i], endDate: e.target.value }; setLiabilities(l); }} className="bg-white border-slate-200 text-slate-900" /></div>
                     </div>
                   </div>
                 ))}
@@ -509,10 +539,10 @@ export default function NewClientPage() {
             </Card>
 
             <div className="flex gap-3">
-              <Button variant="outline" onClick={handleSkip} className="flex-1">
+              <Button variant="outline" onClick={handleSkip} className="flex-1 border-slate-200 hover:bg-slate-50 text-slate-600">
                 Skip for now
               </Button>
-              <Button onClick={handleFinish} className="flex-1 gap-2" disabled={createAsset.isPending || createLiability.isPending}>
+              <Button onClick={handleFinish} className="flex-1 gap-2 shadow-lg shadow-primary/20 h-11" disabled={createAsset.isPending || createLiability.isPending}>
                 Save & View Client <ArrowRight className="h-4 w-4" />
               </Button>
             </div>

@@ -299,19 +299,19 @@ export function DocumentsView({ isAdmin = false }) {
     <div className="space-y-6 md:space-y-8 animate-in fade-in duration-500 pb-12 md:pb-0">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">Secure Documents</h1>
-          <p className="text-sm text-muted-foreground mt-1">Encrypted storage with MPIN-protected access.</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-slate-900">Secure Documents</h1>
+          <p className="text-sm text-slate-500 mt-1">Encrypted storage with MPIN-protected access.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
           <Button 
             variant="outline" 
-            className="gap-2 h-11 md:h-10"
+            className="gap-2 h-11 md:h-10 border-slate-200 bg-white hover:bg-slate-50"
             onClick={() => setSetMpinOpen(true)}
           >
-            <LockKeyhole className="h-4 w-4" />
+            <LockKeyhole className="h-4 w-4 text-slate-500" />
             { (user as UserWithMpin)?.hasMpin ? "Change MPIN" : "Set MPIN" }
           </Button>
-          <Badge variant="outline" className="px-3 py-2 md:py-1 gap-2 bg-primary/5 border-primary/20 text-primary self-start sm:self-center h-11 md:h-10">
+          <Badge variant="outline" className="px-3 py-2 md:py-1 gap-2 bg-primary/10 border-primary/20 text-primary self-start sm:self-center h-11 md:h-10 shadow-sm shadow-primary/5">
             <ShieldCheck className="h-4 w-4" />
             AES-256 Encrypted
           </Badge>
@@ -320,17 +320,17 @@ export function DocumentsView({ isAdmin = false }) {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Upload Section */}
-        <Card className="lg:col-span-1 border-dashed border-2 bg-muted/20">
+        <Card className="lg:col-span-1 border-dashed border-2 border-slate-200 bg-slate-50/50 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">Upload New Document</CardTitle>
-            <CardDescription>Support for PDF, DOCX, and Images (.jpg, .png)</CardDescription>
+            <CardTitle className="text-lg text-slate-900">Upload New Document</CardTitle>
+            <CardDescription className="text-slate-500">Support for PDF, DOCX, and Images (.jpg, .png)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {isAdmin && (
               <div className="space-y-2">
-                <Label>Select Client</Label>
+                <Label className="text-slate-700">Select Client</Label>
                 <select 
-                  className="w-full h-10 px-3 rounded-md border border-input bg-background"
+                  className="w-full h-10 px-3 rounded-md border border-slate-200 bg-white text-slate-900 shadow-sm focus:ring-2 focus:ring-primary/20 transition-all outline-none"
                   value={targetClientId}
                   onChange={(e) => setTargetClientId(e.target.value)}
                 >
@@ -343,18 +343,18 @@ export function DocumentsView({ isAdmin = false }) {
             )}
             
             <div className="space-y-2">
-              <Label>File</Label>
+              <Label className="text-slate-700">File</Label>
               <div 
-                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
-                  selectedFile ? "border-primary bg-primary/5" : "border-muted-foreground/20 hover:border-primary/50"
+                className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-all ${
+                  selectedFile ? "border-primary bg-primary/5 shadow-inner" : "border-slate-200 bg-white hover:border-primary/50 hover:bg-slate-50/50"
                 }`}
                 onClick={() => document.getElementById("file-upload")?.click()}
               >
-                <Upload className={`mx-auto h-8 w-8 mb-2 ${selectedFile ? "text-primary" : "text-muted-foreground"}`} />
-                <p className="text-sm font-medium">
+                <Upload className={`mx-auto h-8 w-8 mb-2 ${selectedFile ? "text-primary" : "text-slate-400"}`} />
+                <p className="text-sm font-medium text-slate-900">
                   {selectedFile ? selectedFile.name : "Click to select a file"}
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">Max 5MB</p>
+                <p className="text-xs text-slate-500 mt-1">Max 5MB</p>
                 <input 
                   id="file-upload"
                   type="file" 
@@ -396,7 +396,7 @@ export function DocumentsView({ isAdmin = false }) {
             </div>
 
             <Button 
-              className="w-full" 
+              className="w-full shadow-lg shadow-primary/20 h-11" 
               disabled={!selectedFile || isUploading}
               onClick={handleUpload}
             >
@@ -416,38 +416,38 @@ export function DocumentsView({ isAdmin = false }) {
         </Card>
 
         {/* History List */}
-        <Card className="lg:col-span-2">
+        <Card className="lg:col-span-2 border-slate-200 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">Processed Documents</CardTitle>
-            <CardDescription>Recently uploaded files and their extraction status.</CardDescription>
+            <CardTitle className="text-lg text-slate-900">Processed Documents</CardTitle>
+            <CardDescription className="text-slate-500">Recently uploaded files and their extraction status.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="h-64 flex items-center justify-center text-muted-foreground">
+              <div className="h-64 flex items-center justify-center text-slate-500">
                 <Clock className="h-8 w-8 animate-spin mr-3" />
                 Loading documents...
               </div>
             ) : documents?.length === 0 ? (
-              <div className="h-64 flex flex-col items-center justify-center text-muted-foreground border-2 border-dotted rounded-xl">
+              <div className="h-64 flex flex-col items-center justify-center text-slate-400 border-2 border-dotted border-slate-100 rounded-xl bg-slate-50/30">
                 <FileText className="h-12 w-12 mb-4 opacity-20" />
-                <p>No documents uploaded yet.</p>
+                <p className="text-sm">No documents uploaded yet.</p>
               </div>
             ) : (
               <ScrollArea className="h-[400px] pr-4">
                 <div className="space-y-3">
                   {documents?.map((doc) => (
-                    <div key={doc.id} className="flex items-center justify-between p-4 rounded-xl border bg-card hover:shadow-md transition-all group">
+                    <div key={doc.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 bg-white hover:bg-slate-50 transition-all group shadow-sm">
                       <div className="flex items-center gap-4 min-w-0">
                         <div className="h-10 w-10 shrink-0 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                           <FileText className="h-5 w-5" />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-sm truncate max-w-[200px]">{doc.filename}</p>
+                          <p className="font-semibold text-sm truncate max-w-[200px] text-slate-900">{doc.filename}</p>
                           <div className="flex items-center gap-2 mt-1 flex-wrap">
-                            <Badge variant="secondary" className="text-[10px] uppercase font-bold px-1.5 py-0">
+                            <Badge variant="secondary" className="text-[10px] uppercase font-bold px-1.5 py-0 bg-slate-100 text-slate-600 border-slate-200">
                               {doc.fileType}
                             </Badge>
-                            <span className="text-[11px] text-muted-foreground">
+                            <span className="text-[11px] text-slate-500">
                               {new Date(doc.uploadTimestamp).toLocaleString()}
                             </span>
                             {isAdmin && (
@@ -462,7 +462,7 @@ export function DocumentsView({ isAdmin = false }) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1.5 bg-primary/5 border-primary/20 hover:bg-primary/10"
+                          className="h-8 gap-1.5 bg-primary/5 border-primary/20 text-primary hover:bg-primary/10 hover:border-primary/40 transition-all"
                           title="View original file"
                           onClick={() => handleViewFile(doc)}
                         >
@@ -472,7 +472,7 @@ export function DocumentsView({ isAdmin = false }) {
                         <Button
                           variant="outline"
                           size="sm"
-                          className="h-8 gap-1.5 text-destructive hover:bg-destructive hover:text-destructive-foreground border-destructive/30 hover:border-destructive"
+                          className="h-8 gap-1.5 text-rose-500 hover:bg-rose-50 hover:text-rose-600 border-rose-100 hover:border-rose-200 transition-all"
                           title="Delete document"
                           onClick={() => setDeletingDoc(doc)}
                         >
@@ -492,13 +492,13 @@ export function DocumentsView({ isAdmin = false }) {
       <Dialog open={mpinPromptOpen} onOpenChange={(open) => {
         if (!open) { setMpinPromptOpen(false); setMpinValue(""); setMpinActionDoc(null); }
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white border-slate-200 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
               <LockKeyhole className="h-5 w-5 text-primary" />
               Secure Verification
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-500">
               Enter your 6-digit MPIN to unlock <strong>{mpinActionDoc?.filename}</strong>.
             </DialogDescription>
           </DialogHeader>
@@ -512,18 +512,18 @@ export function DocumentsView({ isAdmin = false }) {
               type="password"
             >
               <InputOTPGroup className="gap-2">
-                <InputOTPSlot index={0} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={1} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={2} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={3} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={4} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={5} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={0} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={1} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={2} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={3} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={4} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={5} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
               </InputOTPGroup>
             </InputOTP>
-            <p className="text-xs text-muted-foreground">Verification needed once per session</p>
+            <p className="text-xs text-slate-500">Verification needed once per session</p>
           </div>
           <DialogFooter className="sm:justify-center">
-            <Button variant="ghost" onClick={() => { setMpinPromptOpen(false); setMpinValue(""); }}>
+            <Button variant="ghost" onClick={() => { setMpinPromptOpen(false); setMpinValue(""); }} className="text-slate-500 hover:text-slate-900">
               Cancel
             </Button>
           </DialogFooter>
@@ -534,13 +534,13 @@ export function DocumentsView({ isAdmin = false }) {
       <Dialog open={setMpinOpen} onOpenChange={(open) => {
         if (!open) { setSetMpinOpen(false); setNewMpin(""); }
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white border-slate-200 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
               <KeyRound className="h-5 w-5 text-primary" />
               {(user as UserWithMpin)?.hasMpin ? "Change MPIN" : "Create Security MPIN"}
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-500">
               Choose a 6-digit number to protect your financial documents.
             </DialogDescription>
           </DialogHeader>
@@ -553,21 +553,21 @@ export function DocumentsView({ isAdmin = false }) {
               type="password"
             >
               <InputOTPGroup className="gap-2">
-                <InputOTPSlot index={0} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={1} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={2} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={3} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={4} className="w-12 h-14 text-xl rounded-md" />
-                <InputOTPSlot index={5} className="w-12 h-14 text-xl rounded-md" />
+                <InputOTPSlot index={0} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={1} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={2} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={3} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={4} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
+                <InputOTPSlot index={5} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
               </InputOTPGroup>
             </InputOTP>
           </div>
-          <DialogFooter>
-            <Button variant="outline" className="flex-1" onClick={() => { setSetMpinOpen(false); setNewMpin(""); }}>
+          <DialogFooter className="gap-3">
+            <Button variant="outline" className="flex-1 border-slate-200 text-slate-500" onClick={() => { setSetMpinOpen(false); setNewMpin(""); }}>
               Cancel
             </Button>
             <Button 
-              className="flex-1"
+              className="flex-1 shadow-lg shadow-primary/20"
               onClick={() => setMpinMutation.mutate(newMpin)} 
               disabled={newMpin.length !== 6 || setMpinMutation.isPending}
             >
@@ -585,22 +585,23 @@ export function DocumentsView({ isAdmin = false }) {
       <Dialog open={passwordPromptOpen} onOpenChange={(open) => {
         if (!open) { setPasswordPromptOpen(false); setIsUploading(false); }
       }}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md bg-white border-slate-200 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
+            <DialogTitle className="flex items-center gap-2 text-slate-900">
               <KeyRound className="h-5 w-5 text-primary" />
               Password Protected PDF
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-500">
               <strong>{selectedFile?.name}</strong> is encrypted. Enter the PDF password to unlock and process it.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 mt-2">
-            <Label htmlFor="pdf-password">PDF Password</Label>
+            <Label htmlFor="pdf-password" className="text-slate-700">PDF Password</Label>
             <Input
               id="pdf-password"
               type="password"
               placeholder="Enter document password..."
+              className="bg-slate-50 border-slate-200 text-slate-900 placeholder:text-slate-400"
               value={pdfPassword}
               onChange={(e) => setPdfPassword(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleUploadWithPassword(); }}
@@ -608,10 +609,10 @@ export function DocumentsView({ isAdmin = false }) {
             />
           </div>
           <DialogFooter className="mt-4 gap-2">
-            <Button variant="outline" onClick={() => { setPasswordPromptOpen(false); setIsUploading(false); }}>
+            <Button variant="outline" className="border-slate-200 text-slate-500" onClick={() => { setPasswordPromptOpen(false); setIsUploading(false); }}>
               Cancel
             </Button>
-            <Button onClick={handleUploadWithPassword} disabled={!pdfPassword || isUploading}>
+            <Button onClick={handleUploadWithPassword} disabled={!pdfPassword || isUploading} className="shadow-lg shadow-primary/20">
               {isUploading ? (
                 <><Clock className="mr-2 h-4 w-4 animate-spin" />Processing...</>
               ) : (
@@ -624,23 +625,24 @@ export function DocumentsView({ isAdmin = false }) {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deletingDoc} onOpenChange={(open) => { if (!open) setDeletingDoc(null); }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="max-w-sm bg-white border-slate-200 shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-destructive">
+            <DialogTitle className="flex items-center gap-2 text-rose-600">
               <Trash2 className="h-5 w-5" />
               Delete Document
             </DialogTitle>
-            <DialogDescription>
+            <DialogDescription className="text-slate-500">
               Are you sure you want to delete <strong>{deletingDoc?.filename}</strong>?
               This will permanently remove the file and all extracted data. This cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-4 gap-2">
-            <Button variant="outline" onClick={() => setDeletingDoc(null)}>
+            <Button variant="outline" className="border-slate-200 text-slate-500" onClick={() => setDeletingDoc(null)}>
               Cancel
             </Button>
             <Button
               variant="destructive"
+              className="shadow-lg shadow-rose-500/20"
               onClick={() => deletingDoc && deleteMutation.mutate(deletingDoc.id)}
               disabled={deleteMutation.isPending}
             >

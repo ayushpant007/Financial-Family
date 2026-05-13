@@ -32,30 +32,30 @@ const MemberCard = React.memo(({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4, transition: { duration: 0.2 } }}
-      className={`group relative flex flex-col items-center p-6 rounded-2xl border-2 transition-all cursor-pointer w-56 shadow-sm bg-white ${
+      className={`group relative flex flex-col items-center p-6 rounded-2xl border transition-all cursor-pointer w-56 backdrop-blur-md ${
         isSelected 
-          ? "border-primary ring-2 ring-primary/10 shadow-lg shadow-primary/5" 
-          : "border-border hover:border-primary/40 hover:shadow-md"
+          ? "border-primary bg-primary/5 shadow-lg shadow-primary/10" 
+          : "border-slate-200 bg-white hover:border-primary/40 hover:bg-slate-50 shadow-sm"
       }`}
       onClick={() => onSelectMember(isPrimary ? null : member as FamilyMember)}
       style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
     >
-      <div className={`p-4 rounded-2xl mb-4 ${isPrimary ? "bg-primary text-primary-foreground" : "bg-muted/50 text-muted-foreground"}`}>
+      <div className={`p-4 rounded-2xl mb-4 ${isPrimary ? "bg-primary text-white" : "bg-slate-100 text-slate-500"}`}>
         {isPrimary ? <User size={28} /> : (member.relation === "Spouse" ? <Heart size={28} /> : (member.relation === "Parent" ? <Users size={28} /> : <Baby size={28} />))}
       </div>
-      <h3 className="font-extrabold text-base text-center truncate w-full mb-0.5 text-slate-800">{member.name}</h3>
-      <Badge variant="secondary" className={`text-[10px] uppercase tracking-widest mb-3 px-2 h-5 font-black ${isPrimary ? "bg-primary text-white" : "bg-slate-100 text-slate-500"}`}>
+      <h3 className="font-bold text-base text-center truncate w-full mb-0.5 text-slate-900">{member.name}</h3>
+      <Badge variant="secondary" className={`text-[10px] uppercase tracking-widest mb-3 px-2 h-5 font-black ${isPrimary ? "bg-primary text-white" : "bg-slate-100 text-slate-600"}`}>
         {isPrimary ? "Primary Client" : (member as any).relation?.toUpperCase()}
       </Badge>
       
       {member.dob && (
-        <p className="text-[11px] text-muted-foreground font-medium mb-4">DOB: {member.dob}</p>
+        <p className="text-[11px] text-slate-400 font-medium mb-4">DOB: {member.dob}</p>
       )}
       
       <div className="w-full space-y-2 pt-3 border-t border-slate-100">
         <div className="flex justify-between items-center text-[12px]">
           <span className="text-slate-400 font-bold">Net Worth</span>
-          <span className={`font-black ${financials.netWorth >= 0 ? "text-primary" : "text-destructive"}`}>
+          <span className={`font-black ${financials.netWorth >= 0 ? "text-primary" : "text-rose-500"}`}>
             {formatCurrency(financials.netWorth)}
           </span>
         </div>
@@ -69,10 +69,10 @@ const MemberCard = React.memo(({
 
       {!isPrimary && !readOnly && (
         <div className="absolute top-4 right-4 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-sm border border-slate-100 hover:bg-primary hover:text-white" onClick={(e) => { e.stopPropagation(); onEditMember(member as FamilyMember); }}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-sm border border-slate-200 hover:bg-primary hover:text-white" onClick={(e) => { e.stopPropagation(); onEditMember(member as FamilyMember); }}>
             <Pencil size={14} />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-sm border border-slate-100 text-destructive hover:bg-destructive hover:text-white" onClick={(e) => { e.stopPropagation(); onDeleteMember(member.id); }}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full bg-white shadow-sm border border-slate-200 text-rose-500 hover:bg-rose-500 hover:text-white" onClick={(e) => { e.stopPropagation(); onDeleteMember(member.id); }}>
             <Trash2 size={14} />
           </Button>
         </div>
@@ -123,7 +123,7 @@ export function FamilyTree({
   const zoomRef = React.useRef<HTMLDivElement>(null);
   const memberRefs = React.useRef<Record<string, HTMLDivElement | null>>({});
   const [paths, setPaths] = React.useState<string[]>([]);
-  const [scale, setScale] = React.useState(window.innerWidth < 768 ? 0.7 : 0.9);
+  const [scale, setScale] = React.useState(typeof window !== 'undefined' && window.innerWidth < 768 ? 0.45 : 0.9);
 
   const getPos = React.useCallback((id: string) => {
     const el = memberRefs.current[id];
@@ -257,7 +257,7 @@ export function FamilyTree({
   return (
     <div 
       ref={containerRef} 
-      className="p-4 md:p-10 bg-[#f8faff] rounded-3xl md:rounded-[3rem] overflow-hidden relative min-h-[600px] md:min-h-[850px] border border-slate-200/60 shadow-inner select-none"
+      className="p-2 md:p-10 bg-transparent rounded-2xl md:rounded-[3rem] overflow-hidden relative min-h-[500px] md:min-h-[850px] border border-slate-200 select-none shadow-inner"
     >
       <style>{`
         @keyframes lightTravel {
@@ -278,25 +278,25 @@ export function FamilyTree({
       </div>
 
       <div className="absolute bottom-4 md:top-12 right-4 md:right-12 z-50 flex flex-row md:flex-col gap-2 md:gap-3">
-        <div className="flex flex-row md:flex-col bg-white rounded-xl md:rounded-2xl shadow-xl border border-slate-100 overflow-hidden">
-          <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 rounded-none border-r md:border-r-0 md:border-b border-slate-50 hover:bg-slate-50" onClick={() => handleZoom("in")}><Plus size={18} /></Button>
-          <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 rounded-none border-r md:border-r-0 md:border-b border-slate-50 hover:bg-slate-50" onClick={() => handleZoom("out")}><Minus size={18} /></Button>
-          <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 rounded-none hover:bg-slate-50" onClick={() => { setScale(window?.innerWidth < 768 ? 0.6 : 1); }}><Users size={18} /></Button>
+        <div className="flex flex-row md:flex-col bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
+          <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 rounded-none border-r md:border-r-0 md:border-b border-slate-100 hover:bg-slate-50 text-slate-600" onClick={() => handleZoom("in")}><Plus size={18} /></Button>
+          <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 rounded-none border-r md:border-r-0 md:border-b border-slate-100 hover:bg-slate-50 text-slate-600" onClick={() => handleZoom("out")}><Minus size={18} /></Button>
+          <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 rounded-none hover:bg-slate-50 text-slate-600" onClick={() => { setScale(window?.innerWidth < 768 ? 0.6 : 1); }}><Users size={18} /></Button>
         </div>
-        <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 bg-white rounded-xl md:rounded-2xl shadow-xl border border-slate-100 hover:bg-slate-50"><Lock size={18} className="text-slate-400" /></Button>
+        <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl shadow-xl border border-slate-200 hover:bg-slate-50"><Lock size={18} className="text-slate-300" /></Button>
       </div>
 
-      <div className="hidden md:flex absolute bottom-12 right-12 z-50 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-100 shadow-xl flex-col gap-4 min-w-[160px]">
+      <div className="hidden md:flex absolute bottom-12 right-12 z-50 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200 shadow-xl flex-col gap-4 min-w-[160px]">
         <div className="flex items-center gap-4">
-          <div className="w-10 h-1 bg-primary rounded-full" />
+          <div className="w-10 h-1 bg-primary rounded-full shadow-[0_0_10px_rgba(139,92,246,0.3)]" />
           <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">Parent</span>
         </div>
         <div className="flex items-center gap-4">
-          <div className="w-10 h-1 bg-pink-500 rounded-full" />
+          <div className="w-10 h-1 bg-rose-500 rounded-full shadow-[0_0_10px_rgba(244,63,94,0.3)]" />
           <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">Spouse</span>
         </div>
         <div className="flex items-center gap-4">
-          <div className="w-10 h-1 bg-cyan-400 rounded-full" />
+          <div className="w-10 h-1 bg-cyan-500 rounded-full shadow-[0_0_10px_rgba(6,182,212,0.3)]" />
           <span className="text-[11px] font-black uppercase tracking-widest text-slate-500">Child</span>
         </div>
       </div>
@@ -338,10 +338,10 @@ export function FamilyTree({
           
           {spouse && marriageMid && (
             <g transform={`translate(${marriageMid.x - 16}, ${marriageMid.y - 16})`}>
-              <circle cx="16" cy="16" r="16" fill="white" stroke="#ff4d94" strokeWidth="2" style={{ filter: "drop-shadow(0 4px 6px rgba(255, 77, 148, 0.2))" }} />
+              <circle cx="16" cy="16" r="16" fill="white" stroke="#f43f5e" strokeWidth="2" style={{ filter: "drop-shadow(0 4px 6px rgba(244, 63, 94, 0.15))" }} />
               <path 
                 d="M16 24.5c-.2 0-.4-.1-.5-.2-1.8-1.8-5-4.5-6.5-6.5-1.5-2-1.5-4.5 0-6s4.5-1.5 6 0c1.5-1.5 4.5-1.5 6 0s1.5 4 0 6c-1.5 2-4.7 4.7-6.5 6.5-.1.1-.3.2-.5.2z" 
-                fill="#ff4d94" 
+                fill="#f43f5e" 
               />
             </g>
           )}
@@ -364,8 +364,8 @@ export function FamilyTree({
               </div>
             ))}
             {parents.length === 0 && (
-              <div className="w-56 h-40 border-4 border-dashed border-slate-100 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-300 italic text-sm bg-white/40">
-                <Users size={32} className="mb-2 opacity-20" />
+              <div className="w-56 h-40 border-2 border-dashed border-slate-200 rounded-[2.5rem] flex flex-col items-center justify-center text-slate-200 italic text-sm bg-slate-50">
+                <Users size={32} className="mb-2 opacity-50" />
                 Parents
               </div>
             )}
@@ -402,11 +402,11 @@ export function FamilyTree({
               !readOnly && (
                 <Button 
                   variant="outline" 
-                  className="w-56 h-48 border-dashed border-4 flex flex-col gap-4 rounded-[2.5rem] bg-white/40 hover:bg-white hover:border-primary/50 transition-all group shadow-sm border-slate-100"
+                  className="w-56 h-48 border-dashed border-2 flex flex-col gap-4 rounded-[2.5rem] bg-slate-50 hover:bg-slate-100 hover:border-primary/50 transition-all group shadow-sm border-slate-200"
                   onClick={() => onAddMember("Spouse")}
                 >
-                  <div className="p-5 bg-slate-50 group-hover:bg-primary/10 group-hover:text-primary rounded-2xl transition-all shadow-inner text-slate-400"><Plus size={28} /></div>
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-primary">Add Spouse</span>
+                  <div className="p-5 bg-white group-hover:bg-primary/10 group-hover:text-primary rounded-2xl transition-all shadow-sm text-slate-300 border border-slate-100"><Plus size={28} /></div>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 group-hover:text-primary">Add Spouse</span>
                 </Button>
               )
             )}
@@ -431,11 +431,11 @@ export function FamilyTree({
               <div ref={el => memberRefs.current["add-child"] = el}>
                 <Button 
                   variant="outline" 
-                  className="w-56 h-48 border-dashed border-4 flex flex-col gap-4 rounded-[2.5rem] bg-white/40 hover:bg-white hover:border-primary/50 transition-all group shadow-sm border-slate-100"
+                  className="w-56 h-48 border-dashed border-2 flex flex-col gap-4 rounded-[2.5rem] bg-slate-50 hover:bg-slate-100 hover:border-primary/50 transition-all group shadow-sm border-slate-200"
                   onClick={() => onAddMember("Child")}
                 >
-                  <div className="p-5 bg-slate-50 group-hover:bg-primary/10 group-hover:text-primary rounded-2xl transition-all shadow-inner text-slate-400"><Plus size={28} /></div>
-                  <span className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-primary">Add Lineage</span>
+                  <div className="p-5 bg-white group-hover:bg-primary/10 group-hover:text-primary rounded-2xl transition-all shadow-sm text-slate-300 border border-slate-100"><Plus size={28} /></div>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-slate-300 group-hover:text-primary">Add Lineage</span>
                 </Button>
               </div>
             )}

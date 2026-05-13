@@ -33,7 +33,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!isLoading && error) {
       const status = error?.status ?? error?.response?.status;
       const is401 = status === 401;
-      if (is401 && location !== "/login" && !redirectedRef.current) {
+      
+      // Only redirect to login if we are NOT on the landing page (/)
+      // and we are NOT already on the login page
+      const isLandingPage = location === "/";
+      if (is401 && !isLandingPage && location !== "/login" && !redirectedRef.current) {
         redirectedRef.current = true;
         setLocation("/login");
       }
@@ -44,7 +48,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [isLoading, error, user, location, setLocation]);
 
   // If we are on a protected route but don't have a user yet, and we are still loading or fetching, show loader
-  if ((isLoading || isFetching) && !user && location !== "/login") {
+  // Allow the landing page (/) to load without a full-screen spinner
+  const isLandingPage = location === "/";
+  if ((isLoading || isFetching) && !user && location !== "/login" && !isLandingPage) {
     return (
       <div className="flex h-screen w-full items-center justify-center bg-background text-foreground">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />

@@ -57,7 +57,7 @@ export const AnimatedFeatureSpotlight3D = React.forwardRef<
       <section
         ref={ref}
         className={cn(
-          'w-full max-w-6xl mx-auto p-6 md:p-12 rounded-3xl bg-background border border-border/10 overflow-hidden glass shadow-xl md:shadow-2xl',
+          'w-full p-4 md:p-8 rounded-3xl bg-background border border-border/10 overflow-hidden glass shadow-xl md:shadow-2xl',
           className
         )}
         aria-labelledby="feature-spotlight-heading"
@@ -120,7 +120,7 @@ export const AnimatedFeatureSpotlight3D = React.forwardRef<
                 transformStyle: 'preserve-3d',
               }}
               transition={{ type: 'spring', stiffness: 200, damping: 15 }}
-              className="w-full max-w-[280px] md:max-w-md relative"
+              className="w-full max-w-[240px] md:max-w-xs relative"
             >
               <motion.img
                 src={imageUrl}

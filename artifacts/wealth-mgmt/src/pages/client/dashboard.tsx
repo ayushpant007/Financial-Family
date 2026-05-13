@@ -37,6 +37,36 @@ import { FundAutocomplete } from "@/components/fund-autocomplete";
 import { StockAutocomplete } from "@/components/stock-autocomplete";
 import { AnimatedFeatureSpotlight3D } from "@/components/ui/animated-feature-spotlight3d";
 import { Sparkles, Shield, BarChart3 } from "lucide-react";
+import { ScrollingFeatureShowcase } from "@/components/ui/interactive-scrolling-story-component";
+
+import { usePageBackground } from "@/hooks/usePageBackground";
+
+const CLIENT_DASHBOARD_SLIDES = [
+  {
+    title: "Your Wealth, Live & Valued",
+    description: "Every mutual fund, stock, FD, and provident fund is valued in real time using live NAV and NSE prices — no manual updates needed.",
+    image: "/assets/assets.png",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+  {
+    title: "Assets That Work for You",
+    description: "SIPs compounding month by month, FDs maturing on schedule, EPF growing tax-free — your money is always working, and now you can see exactly how.",
+    image: "/assets/step1.png",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+  {
+    title: "Know What You Owe",
+    description: "Home loans, car EMIs, insurance premiums, tax dues — tracked with precise outstanding balances and auto-calculated repayment projections.",
+    image: "/assets/security.png",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+  {
+    title: "Your Net Worth, Always Accurate",
+    description: "Assets minus liabilities, calculated live. See exactly where you stand today — and where you're headed tomorrow.",
+    image: "/assets/assets.png",
+    bgColor: "#FFFFFF", textColor: "#0F172A",
+  },
+];
 
 const ASSET_LABELS: Record<string, string> = {
   mutual_fund: "Mutual Fund", stock: "Stock", fixed_deposit: "Fixed Deposit",
@@ -119,6 +149,12 @@ export default function ClientDashboard() {
   const clientId = user?.clientId;
   const queryClient = useQueryClient();
   const [selectedMemberId, setSelectedMemberId] = useState<number | null>(null);
+  
+  const scrollToPortfolio = () => {
+    document.getElementById('portfolio-section')?.scrollIntoView({ behavior: 'smooth' });
+  };
+  
+  usePageBackground('light');
 
   const { data: familyMembers } = useListFamilyMembers(clientId!, { query: { enabled: !!clientId, queryKey: getListFamilyMembersQueryKey(clientId!) } as any });
   const { data: summary } = useGetClientSummary(clientId!, { query: { enabled: !!clientId, queryKey: getGetClientSummaryQueryKey(clientId!) } as any });
@@ -251,129 +287,238 @@ export default function ClientDashboard() {
     setLiabilityDialog(null); invalidate();
   };
 
-  const filteredAssets = assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
-  const filteredLiabilities = liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
+  const filteredAssets = selectedMemberId === null 
+    ? (assets ?? []) 
+    : (assets?.filter(a => a.familyMemberId === selectedMemberId) ?? []);
+    
+  const filteredLiabilities = selectedMemberId === null 
+    ? (liabilities ?? []) 
+    : (liabilities?.filter(l => l.familyMemberId === selectedMemberId) ?? []);
 
   return (
     <Layout>
       <div className="space-y-8">
         {/* Top Spotlight Section */}
         <AnimatedFeatureSpotlight3D
-          className="bg-primary/5 border-primary/20 py-8"
+          className="glass-panel py-8 border-slate-200 shadow-xl"
           preheaderIcon={<Sparkles className="w-4 h-4 text-primary" />}
           preheaderText="Portfolio Performance"
           heading={
-            <>
+            <span className="text-slate-900">
               Welcome back, <span className="text-primary">{user?.name}</span>
-            </>
+            </span>
           }
-          description={`Your current net worth is ${formatCurrency(summary?.netWorth ?? 0)}. You have ${filteredAssets.length} active assets and ${filteredLiabilities.length} liabilities tracked.`}
+          description={`Your current net worth is ${formatCurrency(summary?.netWorth ?? 0)}. You have ${assets?.length ?? 0} active assets and ${liabilities?.length ?? 0} liabilities tracked.`}
           buttonText="View Detailed Report"
-          imageUrl="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=1000"
+          buttonProps={{ onClick: scrollToPortfolio }}
+          imageUrl="/assets/assets.png"
           imageAlt="Portfolio Performance"
         />
 
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div><h1 className="text-2xl font-bold">My Portfolio</h1><p className="text-sm text-muted-foreground mt-1">Your complete financial overview</p></div>
-          <div className="flex items-center gap-2"><Filter className="h-4 w-4 text-muted-foreground" /><Select value={selectedMemberId?.toString() ?? "all"} onValueChange={(val) => setSelectedMemberId(val === "all" ? null : parseInt(val))}><SelectTrigger className="w-[200px]"><SelectValue placeholder="Filter by member" /></SelectTrigger><SelectContent><SelectItem value="all"><div className="flex items-center gap-2"><User className="h-4 w-4" /><span>My Personal</span></div></SelectItem>{familyMembers?.map(member => (<SelectItem key={member.id} value={member.id.toString()}><div className="flex items-center gap-2"><Users className="h-4 w-4" /><span>{member.name}</span></div></SelectItem>))}</SelectContent></Select></div>
+        <ScrollingFeatureShowcase
+          slides={CLIENT_DASHBOARD_SLIDES}
+          height="460px"
+          ctaText="View Family Tree"
+          ctaHref="/client/family-tree"
+        />
+
+        <div id="portfolio-section" className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 scroll-mt-20" data-reveal>
+          <div><h1 className="text-2xl font-bold text-slate-900">My Portfolio</h1><p className="text-sm text-slate-500 mt-1">Your complete financial overview</p></div>
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-slate-400" />
+            <Select value={selectedMemberId?.toString() ?? "all"} onValueChange={(val) => setSelectedMemberId(val === "all" ? null : parseInt(val))}>
+              <SelectTrigger className="w-[200px] bg-white border-slate-200 text-slate-900 shadow-sm">
+                <SelectValue placeholder="Filter by member" />
+              </SelectTrigger>
+              <SelectContent className="bg-white border-slate-200 text-slate-900">
+                <SelectItem value="all">
+                  <div className="flex items-center gap-2"><Users className="h-4 w-4" /><span>Full Portfolio</span></div>
+                </SelectItem>
+                {familyMembers?.map(member => (
+                  <SelectItem key={member.id} value={member.id.toString()}>
+                    <div className="flex items-center gap-2"><User className="h-4 w-4" /><span>{member.name}</span></div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          <Card className="border-green-500/10 bg-green-500/5">
+          <Card className="glass-panel border-emerald-200 bg-emerald-50/30" data-reveal data-reveal-delay="100">
             <CardContent className="pt-6">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold">Total Assets</p>
-              <p className="text-2xl md:text-3xl font-bold text-green-700 mt-1 tracking-tight">{formatCurrency(summary?.totalAssets ?? 0)}</p>
+              <p className="text-[10px] text-emerald-600/60 uppercase tracking-[0.2em] font-bold">Total Assets</p>
+              <p className="text-2xl md:text-3xl font-bold text-slate-900 mt-1 tracking-tight">{formatCurrency(summary?.totalAssets ?? 0)}</p>
             </CardContent>
           </Card>
-          <Card className="border-red-500/10 bg-red-500/5">
+          <Card className="glass-panel border-rose-200 bg-rose-50/30" data-reveal data-reveal-delay="200">
             <CardContent className="pt-6">
-              <p className="text-[10px] text-muted-foreground uppercase tracking-[0.2em] font-bold">Total Liabilities</p>
-              <p className="text-2xl md:text-3xl font-bold text-red-600 mt-1 tracking-tight">{formatCurrency(summary?.totalLiabilities ?? 0)}</p>
+              <p className="text-[10px] text-rose-600/60 uppercase tracking-[0.2em] font-bold">Total Liabilities</p>
+              <p className="text-2xl md:text-3xl font-bold text-rose-600 mt-1 tracking-tight">{formatCurrency(summary?.totalLiabilities ?? 0)}</p>
             </CardContent>
           </Card>
-          <Card className="gold-gradient border-none shadow-xl md:shadow-2xl shadow-secondary/20">
+          <Card className="glass-panel border-primary/30 bg-primary/5 shadow-xl md:shadow-2xl shadow-primary/5" data-reveal data-reveal-delay="300">
             <CardContent className="pt-6">
-              <p className="text-[10px] text-secondary-foreground/60 uppercase tracking-[0.2em] font-bold">Current Net Worth</p>
-              <p className="text-2xl md:text-3xl font-bold text-secondary-foreground mt-1 tracking-tight">
+              <p className="text-[10px] text-slate-500 uppercase tracking-[0.2em] font-bold">Current Net Worth</p>
+              <p className="text-2xl md:text-3xl font-bold text-slate-900 mt-1 tracking-tight">
                 {formatCurrency(summary?.netWorth ?? 0)}
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" data-reveal data-reveal-delay="400">
           <div className="space-y-4">
-            <div className="flex items-center justify-between"><h2 className="text-xl font-bold">Assets</h2><Button size="sm" className="gap-2" onClick={() => setAssetDialog({ type: "mutual_fund", data: {} })}><Plus className="h-4 w-4" /> Add Asset</Button></div>
-            <Card><CardHeader><CardTitle className="text-base font-medium">{selectedMemberId === null ? "My Assets" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Assets`}</CardTitle></CardHeader>
-            <CardContent className="space-y-3">{filteredAssets.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No assets found</p> : filteredAssets.map((asset) => (
-              <div key={asset.id} className="border-b last:border-0 pb-3 last:pb-0">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0"><Badge variant="secondary" className="text-xs mb-2">{ASSET_LABELS[asset.assetType]} {(asset.data as any).investmentMethod ? ` - ${(asset.data as any).investmentMethod}` : ""}</Badge>
-                    <p className="text-lg font-bold text-green-700">
-                      {formatCurrency(getDisplayValue(asset))}
-                    </p>
-                    <div className="text-[10px] text-muted-foreground space-y-1 mt-2 bg-muted/20 p-2 rounded">
-                      {Object.entries(asset.data as Record<string, any>).map(([k, v]) => {
-                        const skip = ["amount", "basicSalary", "dearnessAllowance", "employeeContributionPercent", "employerContributionPercent", "interestRate", "tenureYears", "currentBalance", "salaryGrowth", "includeEPS", "totalContribution", "startDate", "maturityDate", "monthlyInvestment", "investmentAmount", "institutionName", "payoutType", "age"].includes(k);
-                        return !skip && <p key={k} className="flex justify-between border-b border-border/50 last:border-0 py-0.5"><span className="capitalize opacity-70">{k.replace(/([A-Z])/g, " $1")}</span><span className="font-medium">{String(v)}</span></p>;
-                      })}
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Assets</h2>
+              <Button size="sm" className="gap-2 shadow-lg shadow-primary/10" onClick={() => setAssetDialog({ type: "mutual_fund", data: {} })}>
+                <Plus className="h-4 w-4" /> Add Asset
+              </Button>
+            </div>
+            <Card className="glass-panel border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-base font-medium text-slate-900">
+                  {selectedMemberId === null ? "My Assets" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Assets`}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-6 space-y-3">
+                {filteredAssets.length === 0 ? (
+                  <p className="text-sm text-slate-300 py-4 text-center">No assets found</p>
+                ) : (
+                  filteredAssets.map((asset) => (
+                    <div key={asset.id} className="p-3 sm:p-5 rounded-2xl border border-slate-100 bg-white/40 hover:bg-white/80 transition-all group shadow-sm">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            <Badge variant="secondary" className="text-[9px] md:text-[10px] bg-slate-100 text-slate-700 border-slate-200 uppercase tracking-wider">
+                              {ASSET_LABELS[asset.assetType]} {(asset.data as any).investmentMethod ? ` - ${(asset.data as any).investmentMethod}` : ""}
+                            </Badge>
+                          </div>
+                          <p className="text-xl md:text-2xl font-bold text-slate-900 group-hover:text-primary transition-colors">
+                            {formatCurrency(getDisplayValue(asset))}
+                          </p>
+                          <div className="text-[10px] md:text-xs text-slate-500 space-y-1.5 mt-4 bg-slate-50/80 p-3 rounded-xl border border-slate-100 shadow-inner">
+                            {Object.entries(asset.data as Record<string, any>).map(([k, v]) => {
+                              const skip = ["amount", "basicSalary", "dearnessAllowance", "employeeContributionPercent", "employerContributionPercent", "interestRate", "tenureYears", "currentBalance", "salaryGrowth", "includeEPS", "totalContribution", "startDate", "maturityDate", "monthlyInvestment", "investmentAmount", "institutionName", "payoutType", "age"].includes(k);
+                              return !skip && (
+                                <div key={k} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-1.5 border-b border-slate-200/50 last:border-0 gap-1">
+                                  <span className="capitalize opacity-60 font-bold text-[9px] uppercase tracking-wider">{k.replace(/([A-Z])/g, " $1")}</span>
+                                  <span className="font-bold text-slate-800 break-words sm:text-right flex-1 sm:ml-4">{String(v)}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                          {asset.assetType === "mutual_fund" && (asset.data as any).assetName && (
+                            <div className="mt-3">
+                              {!(asset.data as any).investmentMethod || (asset.data as any).investmentMethod === "Lump sum" ? (
+                                <MutualFundNav
+                                  fundName={(asset.data as any).assetName}
+                                  units={parseFloat((asset.data as any).units ?? "0")}
+                                  investmentAmount={parseFloat((asset.data as any).amount ?? "0")}
+                                />
+                              ) : (asset.data as any).investmentMethod === "SIP" ? (
+                                <SIPValuation data={asset.data} />
+                              ) : (asset.data as any).investmentMethod === "SWP" ? (
+                                <SWPValuation data={asset.data} />
+                              ) : (asset.data as any).investmentMethod === "STP" ? (
+                                <STPValuation data={asset.data} />
+                              ) : null}
+                            </div>
+                          )}
+                          {asset.assetType === "stock" && (asset.data as any).assetName && <StockPriceDisplay stockName={(asset.data as any).assetName} units={parseFloat((asset.data as any).units ?? "0")} investmentAmount={parseFloat((asset.data as any).amount ?? "0")} />}
+                          {asset.assetType === "fixed_deposit" && <FDValuation data={asset.data as any} />}
+                          {asset.assetType === "recurring_deposit" && <RDValuation data={asset.data as any} />}
+                          {asset.assetType === "provident_fund" && <PFValuation data={asset.data as any} />}
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex gap-1.5">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-900 hover:bg-white shadow-sm border border-transparent hover:border-slate-100" onClick={() => {
+                              const data: Record<string, string> = {};
+                              Object.entries(asset.data as Record<string, unknown>).forEach(([k, v]) => { data[k] = String(v); });
+                              setAssetDialog({ type: asset.assetType, data, editId: asset.id });
+                            }}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-rose-400 hover:text-rose-600 hover:bg-rose-50 shadow-sm border border-transparent hover:border-rose-100" onClick={() => { if(confirm("Delete asset?")) deleteAsset.mutateAsync({ clientId: clientId!, assetId: asset.id }).then(invalidate); }}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    {asset.assetType === "mutual_fund" && (asset.data as any).assetName && (
-                      <>
-                        {!(asset.data as any).investmentMethod || (asset.data as any).investmentMethod === "Lump sum" ? (
-                          <MutualFundNav
-                            fundName={(asset.data as any).assetName}
-                            units={parseFloat((asset.data as any).units ?? "0")}
-                            investmentAmount={parseFloat((asset.data as any).amount ?? "0")}
-                          />
-                        ) : (asset.data as any).investmentMethod === "SIP" ? (
-                          <SIPValuation data={asset.data} />
-                        ) : (asset.data as any).investmentMethod === "SWP" ? (
-                          <SWPValuation data={asset.data} />
-                        ) : (asset.data as any).investmentMethod === "STP" ? (
-                          <STPValuation data={asset.data} />
-                        ) : null}
-                      </>
-                    )}
-                    {asset.assetType === "stock" && (asset.data as any).assetName && <StockPriceDisplay stockName={(asset.data as any).assetName} units={parseFloat((asset.data as any).units ?? "0")} investmentAmount={parseFloat((asset.data as any).amount ?? "0")} />}
-                    {asset.assetType === "fixed_deposit" && <FDValuation data={asset.data as any} />}{asset.assetType === "recurring_deposit" && <RDValuation data={asset.data as any} />}{asset.assetType === "provident_fund" && <PFValuation data={asset.data as any} />}
-                  </div>
-                  <div className="flex flex-col items-end gap-2 ml-4"><p className="text-base font-bold text-green-700 whitespace-nowrap">{formatCurrency(getDisplayValue(asset))}</p><div className="flex gap-1"><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { const data: Record<string, string> = {}; Object.entries(asset.data as Record<string, unknown>).forEach(([k, v]) => { data[k] = String(v); }); setAssetDialog({ type: asset.assetType, data, editId: asset.id }); }}><Pencil className="h-3 w-3" /></Button><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if(confirm("Delete asset?")) deleteAsset.mutateAsync({ clientId: clientId!, assetId: asset.id }).then(invalidate); }}><Trash2 className="h-3 w-3" /></Button></div></div>
-                </div>
-              </div>
-            ))}</CardContent></Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between"><h2 className="text-xl font-bold">Liabilities</h2><Button size="sm" variant="destructive" className="gap-2" onClick={() => setLiabilityDialog({ liabilityType: "Loans", loanType: "home_loan", lenderName: "", totalLoanAmount: "", outstandingAmount: "", interestRate: "", emi: "", startDate: "", endDate: "", interestType: "Reducing", subType: "", tenure: "", income: "", tds: "", advanceTax: "", standardDeduction: "75000", insuranceCategory: "", insuranceSubtype: "", propertyValue: "", insuranceRate: "", premium: "", tenureYears: "", baseRate: "", addOns: "", discounts: "", householdCategory: "", householdAmount: "", rent: "", maintenance: "", taxes: "", electricity: "", water: "", gas: "", internet: "", groceries: "", fees: "", books: "", academicCosts: "", maidSalary: "", cookSalary: "", serviceCosts: "", medicalBills: "", medicines: "", miscCosts: "" })}><Plus className="h-4 w-4" /> Add Liability</Button></div>
-            <Card><CardHeader><CardTitle className="text-base font-medium">{selectedMemberId === null ? "My Liabilities" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Liabilities`}</CardTitle></CardHeader>
-            <CardContent className="space-y-3">{filteredLiabilities.length === 0 ? <p className="text-sm text-muted-foreground py-4 text-center">No liabilities found</p> : filteredLiabilities.map((liability) => (
-              <div key={liability.id} className="border-b last:border-0 pb-3 last:pb-0">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <Badge variant="destructive" className="text-xs mb-1">
-                      {(() => { const parts = liability.notes?.split("|") ?? []; const type = parts[0]; const subType = parts[parts.length - 1]; if (type === "Loans") return LOAN_LABELS[liability.loanType]; if (type === "Bills" && subType && subType !== "Bills") return `Bills - ${subType}`; if (type === "Insurance Dues") { const cat = parts.find(p => p.startsWith("Cat:"))?.split(":")[1]; const sub = parts.find(p => p.startsWith("Sub:"))?.split(":")[1]; return sub ? `${cat} - ${sub}` : (cat ?? "Insurance"); } return type || LOAN_LABELS[liability.loanType]; })()}
-                    </Badge>
-                    <p className="text-sm font-medium text-foreground truncate">{liability.lenderName}</p>
-                    <div className="text-[10px] text-muted-foreground mt-2 space-y-1 bg-muted/20 p-2 rounded">
-                      <p className="flex justify-between border-b border-border/50 py-0.5"><span>Total Liability</span><span>{formatCurrency(liability.totalLoanAmount)}</span></p>
-                      <p className="flex justify-between border-b border-border/50 py-0.5"><span>Outstanding</span><span className="text-red-600">{formatCurrency(liability.outstandingAmount)}</span></p>
-                      <p className="flex justify-between border-b border-border/50 py-0.5"><span>Rate</span><span>{liability.interestRate}%</span></p>
-                      <p className="flex justify-between last:border-0 py-0.5"><span>EMI</span><span>{formatCurrency(liability.emi)}</span></p>
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-slate-900">Liabilities</h2>
+              <Button size="sm" variant="destructive" className="gap-2 shadow-lg shadow-rose-500/10" onClick={() => setLiabilityDialog({ liabilityType: "Loans", loanType: "home_loan", lenderName: "", totalLoanAmount: "", outstandingAmount: "", interestRate: "", emi: "", startDate: "", endDate: "", interestType: "Reducing", subType: "", tenure: "", income: "", tds: "", advanceTax: "", standardDeduction: "75000", insuranceCategory: "", insuranceSubtype: "", propertyValue: "", insuranceRate: "", premium: "", tenureYears: "", baseRate: "", addOns: "", discounts: "", householdCategory: "", householdAmount: "", rent: "", maintenance: "", taxes: "", electricity: "", water: "", gas: "", internet: "", groceries: "", fees: "", books: "", academicCosts: "", maidSalary: "", cookSalary: "", serviceCosts: "", medicalBills: "", medicines: "", miscCosts: "" })}>
+                <Plus className="h-4 w-4" /> Add Liability
+              </Button>
+            </div>
+            <Card className="glass-panel border-slate-200">
+              <CardHeader>
+                <CardTitle className="text-base font-medium text-slate-900">
+                  {selectedMemberId === null ? "My Liabilities" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Liabilities`}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-3 sm:p-6 space-y-3">
+                {filteredLiabilities.length === 0 ? (
+                  <p className="text-sm text-slate-300 py-4 text-center">No liabilities found</p>
+                ) : (
+                  filteredLiabilities.map((liability) => (
+                    <div key={liability.id} className="p-3 sm:p-5 rounded-2xl border border-slate-100 bg-white/40 hover:bg-white/80 transition-all group shadow-sm">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            <Badge variant="destructive" className="text-[9px] md:text-[10px] bg-rose-50 text-rose-600 border-rose-100 uppercase tracking-wider">
+                              {(() => { const parts = liability.notes?.split("|") ?? []; const type = parts[0]; const subType = parts[parts.length - 1]; if (type === "Loans") return LOAN_LABELS[liability.loanType]; if (type === "Bills" && subType && subType !== "Bills") return `Bills - ${subType}`; if (type === "Insurance Dues") { const cat = parts.find(p => p.startsWith("Cat:"))?.split(":")[1]; const sub = parts.find(p => p.startsWith("Sub:"))?.split(":")[1]; return sub ? `${cat} - ${sub}` : (cat ?? "Insurance"); } return type || LOAN_LABELS[liability.loanType]; })()}
+                            </Badge>
+                          </div>
+                          <p className="text-sm font-bold text-slate-900 truncate">{liability.lenderName}</p>
+                          <div className="text-[10px] md:text-xs text-slate-500 mt-4 space-y-1.5 bg-slate-50/80 p-3 rounded-xl border border-slate-100 shadow-inner">
+                            <p className="flex justify-between border-b border-slate-100/50 py-1"><span className="opacity-60 font-medium">Total Liability</span><span className="text-slate-700 font-semibold">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                            <p className="flex justify-between border-b border-slate-100/50 py-1"><span className="opacity-60 font-medium">Outstanding</span><span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
+                            <p className="flex justify-between border-b border-slate-100/50 py-1"><span className="opacity-60 font-medium">Rate</span><span className="text-slate-700 font-semibold">{liability.interestRate}%</span></p>
+                            <p className="flex justify-between last:border-0 py-1"><span className="opacity-60 font-medium">EMI</span><span className="text-slate-900 font-bold">{formatCurrency(liability.emi)}</span></p>
+                          </div>
+                          <LoanValuation liability={liability} />
+                        </div>
+                        <div className="flex flex-col items-end gap-2">
+                          <div className="flex gap-1.5">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-slate-400 hover:text-slate-900 hover:bg-white shadow-sm border border-transparent hover:border-slate-100" onClick={() => { 
+                              const parts = liability.notes?.split("|") ?? []; 
+                              const start = liability.startDate ? new Date(liability.startDate) : null; 
+                              const end = liability.endDate ? new Date(liability.endDate) : null; 
+                              const months = (start && end) ? (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) : 0; 
+                              setLiabilityDialog({ loanType: liability.loanType, liabilityType: parts[0] ?? "Loans", interestType: liability.notes?.includes("|Flat") ? "Flat" : "Reducing", subType: parts.length > 1 && parts[parts.length-1] !== "Flat" ? parts[parts.length-1] : "", lenderName: liability.lenderName, totalLoanAmount: String(liability.totalLoanAmount), outstandingAmount: String(liability.outstandingAmount), interestRate: String(liability.interestRate), emi: String(liability.emi), startDate: liability.startDate ?? "", endDate: liability.endDate ?? "", tenure: months > 0 ? (months / 12).toFixed(1) : "", income: parts.find((p: string) => p.startsWith("Income:"))?.split(":")[1] ?? "", tds: parts.find((p: string) => p.startsWith("TDS:"))?.split(":")[1] ?? "", advanceTax: parts.find((p: string) => p.startsWith("Advance:"))?.split(":")[1] ?? "", standardDeduction: parts.find((p: string) => p.startsWith("StdDed:"))?.split(":")[1] ?? "75000", insuranceCategory: parts.find((p: string) => p.startsWith("Cat:"))?.split(":")[1] ?? "", insuranceSubtype: parts.find((p: string) => p.startsWith("Sub:"))?.split(":")[1] ?? "", propertyValue: "", insuranceRate: "", premium: parts.find((p: string) => p.startsWith("Premium:"))?.split(":")[1] ?? "", tenureYears: parts.find((p: string) => p.startsWith("Years:"))?.split(":")[1] ?? "", baseRate: parts.find((p: string) => p.startsWith("Base:"))?.split(":")[1] ?? "", addOns: parts.find((p: string) => p.startsWith("Addons:"))?.split(":")[1] ?? "", discounts: parts.find((p: string) => p.startsWith("Disc:"))?.split(":")[1] ?? "", householdCategory: parts.find((p: string) => p.startsWith("Cat:"))?.split(":")[1] ?? "", householdAmount: parts.find((p: string) => p.startsWith("Amt:"))?.split(":")[1] ?? "", rent: parts.find((p: string) => p.startsWith("Rent:"))?.split(":")[1] ?? "", maintenance: parts.find((p: string) => p.startsWith("Maint:"))?.split(":")[1] ?? "", taxes: parts.find((p: string) => p.startsWith("Taxes:"))?.split(":")[1] ?? "", electricity: parts.find((p: string) => p.startsWith("Elec:"))?.split(":")[1] ?? "", water: parts.find((p: string) => p.startsWith("Water:"))?.split(":")[1] ?? "", gas: parts.find((p: string) => p.startsWith("Gas:"))?.split(":")[1] ?? "", internet: parts.find((p: string) => p.startsWith("Net:"))?.split(":")[1] ?? "", groceries: parts.find((p: string) => p.startsWith("Groc:"))?.split(":")[1] ?? "", fees: parts.find((p: string) => p.startsWith("Fees:"))?.split(":")[1] ?? "", books: parts.find((p: string) => p.startsWith("Books:"))?.split(":")[1] ?? "", academicCosts: parts.find((p: string) => p.startsWith("Acad:"))?.split(":")[1] ?? "", maidSalary: parts.find((p: string) => p.startsWith("Maid:"))?.split(":")[1] ?? "", cookSalary: parts.find((p: string) => p.startsWith("Cook:"))?.split(":")[1] ?? "", serviceCosts: parts.find((p: string) => p.startsWith("Serv:"))?.split(":")[1] ?? "", medicalBills: parts.find((p: string) => p.startsWith("MedB:"))?.split(":")[1] ?? "", medicines: parts.find((p: string) => p.startsWith("MedI:"))?.split(":")[1] ?? "", miscCosts: parts.find((p: string) => p.startsWith("Misc:"))?.split(":")[1] ?? "", editId: liability.id }); 
+                            }}>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full text-rose-400 hover:text-rose-600 hover:bg-rose-50 shadow-sm border border-transparent hover:border-rose-100" onClick={() => { if(confirm("Delete liability?")) deleteLiability.mutateAsync({ clientId: clientId!, liabilityId: liability.id }).then(invalidate); }}>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    <LoanValuation liability={liability} />
-                  </div>
-                  <div className="flex flex-col items-end gap-2 ml-4"><p className="text-base font-bold text-red-600 whitespace-nowrap">{formatCurrency(liability.outstandingAmount)}</p><div className="flex gap-1"><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { const parts = liability.notes?.split("|") ?? []; const start = liability.startDate ? new Date(liability.startDate) : null; const end = liability.endDate ? new Date(liability.endDate) : null; const months = (start && end) ? (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) : 0; setLiabilityDialog({ loanType: liability.loanType, liabilityType: parts[0] ?? "Loans", interestType: liability.notes?.includes("|Flat") ? "Flat" : "Reducing", subType: parts.length > 1 && parts[parts.length-1] !== "Flat" ? parts[parts.length-1] : "", lenderName: liability.lenderName, totalLoanAmount: String(liability.totalLoanAmount), outstandingAmount: String(liability.outstandingAmount), interestRate: String(liability.interestRate), emi: String(liability.emi), startDate: liability.startDate ?? "", endDate: liability.endDate ?? "", tenure: months > 0 ? (months / 12).toFixed(1) : "", income: parts.find((p: string) => p.startsWith("Income:"))?.split(":")[1] ?? "", tds: parts.find((p: string) => p.startsWith("TDS:"))?.split(":")[1] ?? "", advanceTax: parts.find((p: string) => p.startsWith("Advance:"))?.split(":")[1] ?? "", standardDeduction: parts.find((p: string) => p.startsWith("StdDed:"))?.split(":")[1] ?? "75000", insuranceCategory: parts.find((p: string) => p.startsWith("Cat:"))?.split(":")[1] ?? "", insuranceSubtype: parts.find((p: string) => p.startsWith("Sub:"))?.split(":")[1] ?? "", propertyValue: "", insuranceRate: "", premium: parts.find((p: string) => p.startsWith("Premium:"))?.split(":")[1] ?? "", tenureYears: parts.find((p: string) => p.startsWith("Years:"))?.split(":")[1] ?? "", baseRate: parts.find((p: string) => p.startsWith("Base:"))?.split(":")[1] ?? "", addOns: parts.find((p: string) => p.startsWith("Addons:"))?.split(":")[1] ?? "", discounts: parts.find((p: string) => p.startsWith("Disc:"))?.split(":")[1] ?? "", householdCategory: parts.find((p: string) => p.startsWith("Cat:"))?.split(":")[1] ?? "", householdAmount: parts.find((p: string) => p.startsWith("Amt:"))?.split(":")[1] ?? "", rent: parts.find((p: string) => p.startsWith("Rent:"))?.split(":")[1] ?? "", maintenance: parts.find((p: string) => p.startsWith("Maint:"))?.split(":")[1] ?? "", taxes: parts.find((p: string) => p.startsWith("Taxes:"))?.split(":")[1] ?? "", electricity: parts.find((p: string) => p.startsWith("Elec:"))?.split(":")[1] ?? "", water: parts.find((p: string) => p.startsWith("Water:"))?.split(":")[1] ?? "", gas: parts.find((p: string) => p.startsWith("Gas:"))?.split(":")[1] ?? "", internet: parts.find((p: string) => p.startsWith("Net:"))?.split(":")[1] ?? "", groceries: parts.find((p: string) => p.startsWith("Groc:"))?.split(":")[1] ?? "", fees: parts.find((p: string) => p.startsWith("Fees:"))?.split(":")[1] ?? "", books: parts.find((p: string) => p.startsWith("Books:"))?.split(":")[1] ?? "", academicCosts: parts.find((p: string) => p.startsWith("Acad:"))?.split(":")[1] ?? "", maidSalary: parts.find((p: string) => p.startsWith("Maid:"))?.split(":")[1] ?? "", cookSalary: parts.find((p: string) => p.startsWith("Cook:"))?.split(":")[1] ?? "", serviceCosts: parts.find((p: string) => p.startsWith("Serv:"))?.split(":")[1] ?? "", medicalBills: parts.find((p: string) => p.startsWith("MedB:"))?.split(":")[1] ?? "", medicines: parts.find((p: string) => p.startsWith("MedI:"))?.split(":")[1] ?? "", miscCosts: parts.find((p: string) => p.startsWith("Misc:"))?.split(":")[1] ?? "", editId: liability.id }); }}><Pencil className="h-3 w-3" /></Button><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => { if(confirm("Delete liability?")) deleteLiability.mutateAsync({ clientId: clientId!, liabilityId: liability.id }).then(invalidate); }}><Trash2 className="h-3 w-3" /></Button></div></div>
-                </div>
-              </div>
-            ))}</CardContent></Card>
+                  ))
+                )}
+              </CardContent>
+            </Card>
           </div>
         </div>
       </div>
 
       <Dialog open={!!assetDialog} onOpenChange={(open) => !open && setAssetDialog(null)}>
-        <DialogContent className="max-w-lg"><DialogHeader><DialogTitle>{assetDialog?.editId ? "Edit Asset" : "Add Asset"}</DialogTitle></DialogHeader>
-        {assetDialog && (<div className="space-y-4">{!assetDialog.editId && (<div><Label>Asset Type</Label><Select value={assetDialog.type} onValueChange={(v) => { setAssetDialog({ type: v, data: {} }); }}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{ASSET_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select></div>)}
+        <DialogContent className="max-w-lg bg-white border-slate-200 shadow-2xl">
+          <DialogHeader><DialogTitle className="text-slate-900 font-bold">
+            {assetDialog?.editId ? "Edit Asset" : "Add Asset"}
+          </DialogTitle></DialogHeader>
+        {assetDialog && (<div className="space-y-4">{!assetDialog.editId && (<div><Label className="text-slate-700">Asset Type</Label><Select value={assetDialog.type} onValueChange={(v) => { setAssetDialog({ type: v, data: {} }); }}><SelectTrigger className="bg-white border-slate-200 text-slate-900"><SelectValue /></SelectTrigger><SelectContent className="bg-white border-slate-200 text-slate-900">{ASSET_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent></Select></div>)}
           {assetDialog.type === "mutual_fund" && (
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">

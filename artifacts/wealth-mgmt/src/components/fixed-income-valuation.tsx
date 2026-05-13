@@ -1,5 +1,5 @@
 import { formatCurrency } from "@/lib/utils-format";
-import { TrendingUp, Calculator } from "lucide-react";
+import { TrendingUp, TrendingDown, Calculator } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -439,54 +439,55 @@ export function FDValuation({ data }: FDValuationProps) {
   const isMatured = maturity ? new Date() >= new Date(maturity) : false;
 
   return (
-    <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 space-y-1">
+    <div className="mt-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Principal</span>
-        <span className="font-medium">{formatCurrency(principal)}</span>
+        <span className="text-slate-500">Principal</span>
+        <span className="font-medium text-slate-900">{formatCurrency(principal)}</span>
       </div>
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">
-          Interest ({rate}% p.a., {payoutType} compounding)
-        </span>
-        <span className="font-medium text-green-600">+ {formatCurrency(interest)}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs border-b border-slate-100/50 pb-1">
+        <span className="text-slate-500">Interest ({rate}% p.a., {payoutType} compounding)</span>
+        <span className="font-medium text-emerald-600">+ {formatCurrency(interest)}</span>
       </div>
-      <div className="flex flex-col gap-2 border-t pt-2 mt-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-semibold text-foreground flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
-            <span className="truncate">
-              {isMatured ? "Maturity Value" : `Current Value (as of ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`}
+      <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-3 mt-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+          <span className="font-semibold text-slate-900 flex items-center gap-1.5">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+            <span>
+              {isMatured ? "Maturity Value" : `Current Value`}
             </span>
           </span>
-          <span className="font-bold text-green-700 whitespace-nowrap">{formatCurrency(currentValue)}</span>
+          <span className="font-bold text-emerald-700 text-lg sm:text-base">{formatCurrency(currentValue)}</span>
         </div>
+        {!isMatured && (
+          <p className="text-[10px] text-slate-400 italic">As of {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+        )}
         
         <div>
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto">
+              <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto bg-white border-slate-200 text-slate-600 hover:bg-slate-50">
                 <Calculator className="h-3 w-3 mr-2" /> View Projection
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+            <DialogContent className="max-w-md max-h-[80vh] flex flex-col bg-white border-slate-200">
               <DialogHeader>
-                <DialogTitle>FD Growth Projection</DialogTitle>
+                <DialogTitle className="text-slate-900">FD Growth Projection</DialogTitle>
               </DialogHeader>
               <ScrollArea className="flex-1 overflow-y-auto pr-4">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead>Month</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Amount (₹)</TableHead>
+                    <TableRow className="border-slate-100">
+                      <TableHead className="text-slate-500">Month</TableHead>
+                      <TableHead className="text-slate-500">Date</TableHead>
+                      <TableHead className="text-right text-slate-500">Amount (₹)</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {generateFDProjection(P, R, n_freq, start, maturity).map((row) => (
-                      <TableRow key={row.month}>
-                        <TableCell>{row.month}</TableCell>
-                        <TableCell>{row.dateStr}</TableCell>
-                        <TableCell className="text-right font-medium text-green-700">
+                      <TableRow key={row.month} className="border-slate-50">
+                        <TableCell className="text-slate-600">{row.month}</TableCell>
+                        <TableCell className="text-slate-600">{row.dateStr}</TableCell>
+                        <TableCell className="text-right font-medium text-emerald-700">
                           {formatCurrency(row.amount)}
                         </TableCell>
                       </TableRow>
@@ -532,55 +533,58 @@ export function RDValuation({ data }: FDValuationProps) {
   const isComplete = start ? monthsElapsed(start) >= tenureMonths : false;
 
   return (
-    <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 space-y-1">
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">
+    <div className="mt-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 space-y-1">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+        <span className="text-slate-500">
           Invested ({n_installments} of {tenureMonths} months)
         </span>
-        <span className="font-medium">{formatCurrency(totalInvested)}</span>
+        <span className="font-medium text-slate-900">{formatCurrency(totalInvested)}</span>
       </div>
-      <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Interest ({rate}% p.a., Quarterly comp.)</span>
-        <span className="font-medium text-green-600">+ {formatCurrency(interest)}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs border-b border-slate-100/50 pb-1">
+        <span className="text-slate-500">Interest ({rate}% p.a., Quarterly comp.)</span>
+        <span className="font-medium text-emerald-600">+ {formatCurrency(interest)}</span>
       </div>
-      <div className="flex flex-col gap-2 border-t pt-2 mt-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-semibold text-foreground flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
-            <span className="truncate">
-              {isComplete ? "Maturity Value" : `Current Value (as of ${new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })})`}
+      <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-3 mt-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+          <span className="font-semibold text-slate-900 flex items-center gap-1.5">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+            <span>
+              {isComplete ? "Maturity Value" : `Current Value`}
             </span>
           </span>
-          <span className="font-bold text-green-700 whitespace-nowrap">{formatCurrency(currentValue)}</span>
+          <span className="font-bold text-emerald-700 text-lg sm:text-base">{formatCurrency(currentValue)}</span>
         </div>
+        {!isComplete && (
+          <p className="text-[10px] text-slate-400 italic">As of {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
+        )}
         
         {start && tenureMonths > 0 && (
           <div>
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto">
+                <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto bg-white border-slate-200 text-slate-600 hover:bg-slate-50">
                   <Calculator className="h-3 w-3 mr-2" /> View Projection
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+              <DialogContent className="max-w-md max-h-[80vh] flex flex-col bg-white border-slate-200">
                 <DialogHeader>
-                  <DialogTitle>RD Growth Projection</DialogTitle>
+                  <DialogTitle className="text-slate-900">RD Growth Projection</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="flex-1 overflow-y-auto pr-4">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Month</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead className="text-right">Amount (₹)</TableHead>
+                      <TableRow className="border-slate-100">
+                        <TableHead className="text-slate-500">Month</TableHead>
+                        <TableHead className="text-slate-500">Date</TableHead>
+                        <TableHead className="text-right text-slate-500">Amount (₹)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {generateRDProjection(M, rate, 4, start, tenureMonths).map((row) => (
-                        <TableRow key={row.month}>
-                          <TableCell>{row.month}</TableCell>
-                          <TableCell>{row.dateStr}</TableCell>
-                          <TableCell className="text-right font-medium text-green-700">
+                        <TableRow key={row.month} className="border-slate-50">
+                          <TableCell className="text-slate-600">{row.month}</TableCell>
+                          <TableCell className="text-slate-600">{row.dateStr}</TableCell>
+                          <TableCell className="text-right font-medium text-emerald-700">
                             {formatCurrency(row.amount)}
                           </TableCell>
                         </TableRow>
@@ -602,85 +606,86 @@ export function PFValuation({ data }: { data: any }) {
   const maturityDateStr = String(data.maturityDate ?? "");
 
   return (
-    <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 space-y-1">
+    <div className="mt-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 space-y-1">
       {accountType === "EPF" && data.basicSalary ? (
         <>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Monthly Salary (Basic+DA)</span>
-            <span className="font-medium">{formatCurrency((parseFloat(String(data.basicSalary)) || 0) + (parseFloat(String(data.dearnessAllowance)) || 0))}</span>
+            <span className="text-slate-500">Monthly Salary (Basic+DA)</span>
+            <span className="font-medium text-slate-900">{formatCurrency((parseFloat(String(data.basicSalary)) || 0) + (parseFloat(String(data.dearnessAllowance)) || 0))}</span>
           </div>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Contribution ({String(data.employeeContributionPercent)}%)</span>
-            <span className="font-medium">EPF Corpus</span>
+            <span className="text-slate-500">Contribution ({String(data.employeeContributionPercent)}%)</span>
+            <span className="font-medium text-slate-900">EPF Corpus</span>
           </div>
           {data.age && (
             <div className="flex items-center justify-between text-xs mt-1">
-              <span className="text-muted-foreground">Your Age</span>
-              <span className="font-medium">{data.age} Yr</span>
+              <span className="text-slate-500">Your Age</span>
+              <span className="font-medium text-slate-900">{data.age} Yr</span>
             </div>
           )}
         </>
       ) : (
         <>
           <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">{accountType === "EPF" ? "Monthly" : "Annual"} Contribution</span>
-            <span className="font-medium">{formatCurrency(P)}</span>
+            <span className="text-slate-500">{accountType === "EPF" ? "Monthly" : "Annual"} Contribution</span>
+            <span className="font-medium text-slate-900">{formatCurrency(P)}</span>
           </div>
           {data.age && (
             <div className="flex items-center justify-between text-xs mt-1">
-              <span className="text-muted-foreground">Your Age</span>
-              <span className="font-medium">{data.age} Yr</span>
+              <span className="text-slate-500">Your Age</span>
+              <span className="font-medium text-slate-900">{data.age} Yr</span>
             </div>
           )}
         </>
       )}
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">
+        <span className="text-slate-500">
           Interest ({rate}% p.a. × {T} yrs)
         </span>
-        <span className="font-medium text-green-600">+ {formatCurrency(totalInterest)}</span>
+        <span className="font-medium text-emerald-600">+ {formatCurrency(totalInterest)}</span>
       </div>
       {maturityDateStr && (
-        <div className="flex items-center justify-between text-[10px] text-muted-foreground italic">
+        <div className="flex items-center justify-between text-[10px] text-slate-400 italic">
           <span>Maturity Date: {new Date(maturityDateStr).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</span>
         </div>
       )}
-      <div className="flex flex-col gap-2 border-t pt-2 mt-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-semibold text-foreground flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
-            <span className="truncate">Current Value</span>
+      <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-3 mt-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+          <span className="font-semibold text-slate-900 flex items-center gap-1.5">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+            <span>Current Value</span>
           </span>
-          <span className="font-bold text-green-700 whitespace-nowrap">{formatCurrency(currentValue)}</span>
+          <span className="font-bold text-emerald-700 text-lg sm:text-base">{formatCurrency(currentValue)}</span>
         </div>
+        <p className="text-[10px] text-slate-400 italic">As of {new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</p>
         
         {(P > 0 || (accountType === "EPF" && parseFloat(String(data.basicSalary)) > 0)) && (
           <div>
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto">
+                <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto bg-white border-slate-200 text-slate-600 hover:bg-slate-50">
                   <Calculator className="h-3 w-3 mr-2" /> View Projection
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+              <DialogContent className="max-w-md max-h-[80vh] flex flex-col bg-white border-slate-200">
                 <DialogHeader>
-                  <DialogTitle>PF Growth Projection</DialogTitle>
+                  <DialogTitle className="text-slate-900">PF Growth Projection</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="flex-1 overflow-y-auto pr-4">
                   <Table>
                     <TableHeader>
-                      <TableRow>
-                        <TableHead>Year</TableHead>
-                        <TableHead>Financial Year</TableHead>
-                        <TableHead className="text-right">Balance (₹)</TableHead>
+                      <TableRow className="border-slate-100">
+                        <TableHead className="text-slate-500">Year</TableHead>
+                        <TableHead className="text-slate-500">Financial Year</TableHead>
+                        <TableHead className="text-right text-slate-500">Balance (₹)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {generatePFProjection(P, rate, startYear, projectionYears, accountType, data).map((row) => (
-                        <TableRow key={row.month} className={row.dateStr === String(new Date().getFullYear()) ? "bg-muted/50" : ""}>
-                          <TableCell>{row.month}</TableCell>
-                          <TableCell>{row.dateStr}-{Number(row.dateStr)+1}</TableCell>
-                          <TableCell className="text-right font-medium text-green-700">
+                        <TableRow key={row.month} className={row.dateStr === String(new Date().getFullYear()) ? "bg-primary/5" : "border-slate-50"}>
+                          <TableCell className="text-slate-600">{row.month}</TableCell>
+                          <TableCell className="text-slate-600">{row.dateStr}-{Number(row.dateStr)+1}</TableCell>
+                          <TableCell className="text-right font-medium text-emerald-700">
                             {formatCurrency(row.amount)}
                           </TableCell>
                         </TableRow>
@@ -767,13 +772,13 @@ export function LoanValuation({ liability }: { liability: any }) {
   const totalRepaymentAmount = P + totalInterestPayable;
 
   return (
-    <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 space-y-2">
+    <div className="mt-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 space-y-2">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground font-medium">Repayment Progress</span>
+        <span className="text-slate-500 font-medium">Repayment Progress</span>
         <span className="font-bold text-primary">{progressPercent.toFixed(1)}%</span>
       </div>
       
-      <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+      <div className="w-full bg-slate-200 rounded-full h-1.5 overflow-hidden">
         <div 
           className="bg-primary h-full transition-all duration-500" 
           style={{ width: `${progressPercent}%` }}
@@ -782,25 +787,25 @@ export function LoanValuation({ liability }: { liability: any }) {
 
       <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px]">
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Principal Paid:</span>
-          <span className="text-foreground font-medium">{formatCurrency(paidAmount)}</span>
+          <span className="text-slate-500">Principal Paid:</span>
+          <span className="text-slate-900 font-medium">{formatCurrency(paidAmount)}</span>
         </div>
         <div className="flex justify-between">
-          <span className="text-muted-foreground">Remaining:</span>
-          <span className="text-red-600 font-bold">{formatCurrency(outstanding)}</span>
+          <span className="text-slate-500">Remaining:</span>
+          <span className="text-rose-600 font-bold">{formatCurrency(outstanding)}</span>
         </div>
         
-        <div className="flex justify-between border-t pt-1 mt-1">
-          <span className="text-muted-foreground">Total Interest:</span>
+        <div className="flex justify-between border-t border-slate-200/60 pt-1 mt-1">
+          <span className="text-slate-500">Total Interest:</span>
           <span className="text-amber-600 font-medium">{formatCurrency(totalInterestPayable)}</span>
         </div>
-        <div className="flex justify-between border-t pt-1 mt-1">
-          <span className="text-muted-foreground">Total Amount:</span>
-          <span className="text-foreground font-bold">{formatCurrency(totalRepaymentAmount)}</span>
+        <div className="flex justify-between border-t border-slate-200/60 pt-1 mt-1">
+          <span className="text-slate-500">Total Amount:</span>
+          <span className="text-slate-900 font-bold">{formatCurrency(totalRepaymentAmount)}</span>
         </div>
 
         {emi > 0 && (
-          <div className="flex justify-between col-span-2 border-t pt-1 mt-1 italic text-muted-foreground">
+          <div className="flex justify-between col-span-2 border-t border-slate-200/60 pt-1 mt-1 italic text-slate-400">
             <span>EMI: {formatCurrency(emi)}/mo</span>
             {tenureMonths > 0 && <span>Tenure: {tenureMonths} months</span>}
           </div>
@@ -811,24 +816,24 @@ export function LoanValuation({ liability }: { liability: any }) {
         <div className="pt-1">
           <Dialog>
             <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-6 text-[10px] w-full">
+              <Button variant="outline" size="sm" className="h-6 text-[10px] w-full bg-white border-slate-200 text-slate-600 hover:bg-slate-50">
                 <Calculator className="h-3 w-3 mr-1" /> View Repayment Schedule
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
+            <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col bg-white border-slate-200">
               <DialogHeader>
-                <DialogTitle>Loan Repayment Schedule</DialogTitle>
-                <div className="grid grid-cols-3 gap-4 pt-2 border-b pb-4">
+                <DialogTitle className="text-slate-900">Loan Repayment Schedule</DialogTitle>
+                <div className="grid grid-cols-3 gap-4 pt-2 border-b border-slate-100 pb-4">
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Principal Amount</p>
-                    <p className="text-sm font-bold">{formatCurrency(P)}</p>
+                    <p className="text-xs text-slate-500">Principal Amount</p>
+                    <p className="text-sm font-bold text-slate-900">{formatCurrency(P)}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Total Interest</p>
+                    <p className="text-xs text-slate-500">Total Interest</p>
                     <p className="text-sm font-bold text-amber-600">{formatCurrency(totalInterestPayable)}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-muted-foreground">Total Amount</p>
+                    <p className="text-xs text-slate-500">Total Amount</p>
                     <p className="text-sm font-bold text-primary">{formatCurrency(totalRepaymentAmount)}</p>
                   </div>
                 </div>
@@ -836,20 +841,20 @@ export function LoanValuation({ liability }: { liability: any }) {
               <ScrollArea className="flex-1 overflow-y-auto pr-4">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-xs">Month</TableHead>
-                      <TableHead className="text-xs">Principal Component</TableHead>
-                      <TableHead className="text-xs">Interest Component</TableHead>
-                      <TableHead className="text-right text-xs">Remaining Balance</TableHead>
+                    <TableRow className="border-slate-100">
+                      <TableHead className="text-xs text-slate-500">Month</TableHead>
+                      <TableHead className="text-xs text-slate-500">Principal Component</TableHead>
+                      <TableHead className="text-xs text-slate-500">Interest Component</TableHead>
+                      <TableHead className="text-right text-xs text-slate-500">Remaining Balance</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {projection.map((row) => (
-                      <TableRow key={row.month}>
-                        <TableCell className="text-xs py-2">{row.dateStr}</TableCell>
-                        <TableCell className="text-xs py-2 text-green-700 font-medium">{formatCurrency(row.principal)}</TableCell>
-                        <TableCell className="text-xs py-2 text-red-600">{formatCurrency(row.interest)}</TableCell>
-                        <TableCell className="text-right text-xs py-2 font-bold">{formatCurrency(row.balance)}</TableCell>
+                      <TableRow key={row.month} className="border-slate-50">
+                        <TableCell className="text-xs py-2 text-slate-600">{row.dateStr}</TableCell>
+                        <TableCell className="text-xs py-2 text-emerald-700 font-medium">{formatCurrency(row.principal)}</TableCell>
+                        <TableCell className="text-xs py-2 text-rose-600">{formatCurrency(row.interest)}</TableCell>
+                        <TableCell className="text-right text-xs py-2 font-bold text-slate-900">{formatCurrency(row.balance)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -878,45 +883,45 @@ export function SIPValuation({ data }: { data: any }) {
   const gains = currentValue - totalInvested;
 
   return (
-    <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 space-y-1">
+    <div className="mt-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Monthly SIP</span>
-        <span className="font-medium">{formatCurrency(P)}</span>
+        <span className="text-slate-500">Monthly SIP</span>
+        <span className="font-medium text-slate-900">{formatCurrency(P)}</span>
       </div>
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Total Invested</span>
-        <span className="font-medium">{formatCurrency(totalInvested)}</span>
+        <span className="text-slate-500">Total Invested</span>
+        <span className="font-medium text-slate-900">{formatCurrency(totalInvested)}</span>
       </div>
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Estimated Gains ({rate}% p.a.)</span>
-        <span className="font-medium text-green-600">+ {formatCurrency(gains)}</span>
+        <span className="text-slate-500">Estimated Gains ({rate}% p.a.)</span>
+        <span className="font-medium text-emerald-600">+ {formatCurrency(gains)}</span>
       </div>
-      <div className="flex flex-col gap-2 border-t pt-2 mt-2">
+      <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-2 mt-2">
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-semibold text-foreground flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
+          <span className="font-semibold text-slate-900 flex items-center gap-1">
+            <TrendingUp className="h-3 w-3 text-emerald-600 flex-shrink-0" />
             <span className="truncate">Current Value</span>
           </span>
-          <span className="font-bold text-green-700 whitespace-nowrap">{formatCurrency(currentValue)}</span>
+          <span className="font-bold text-emerald-700 whitespace-nowrap">{formatCurrency(currentValue)}</span>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto bg-white border-slate-200 text-slate-600 hover:bg-slate-50">
               <Calculator className="h-3 w-3 mr-2" /> View Projection
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
-            <DialogHeader><DialogTitle>SIP Growth Projection</DialogTitle></DialogHeader>
+          <DialogContent className="max-w-md max-h-[80vh] flex flex-col bg-white border-slate-200">
+            <DialogHeader><DialogTitle className="text-slate-900">SIP Growth Projection</DialogTitle></DialogHeader>
             <ScrollArea className="flex-1 overflow-y-auto pr-4">
               <Table>
                 <TableHeader>
-                  <TableRow><TableHead>Month</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Value (₹)</TableHead></TableRow>
+                  <TableRow className="border-slate-100"><TableHead className="text-slate-500">Month</TableHead><TableHead className="text-slate-500">Date</TableHead><TableHead className="text-right text-slate-500">Value (₹)</TableHead></TableRow>
                 </TableHeader>
                 <TableBody>
                   {generateSIPProjection(P, rate, totalMonths, start).map((row) => (
-                    <TableRow key={row.month}>
-                      <TableCell>{row.month}</TableCell><TableCell>{row.dateStr}</TableCell>
-                      <TableCell className="text-right font-medium text-green-700">{formatCurrency(row.amount)}</TableCell>
+                    <TableRow key={row.month} className="border-slate-50">
+                      <TableCell className="text-slate-600">{row.month}</TableCell><TableCell className="text-slate-600">{row.dateStr}</TableCell>
+                      <TableCell className="text-right font-medium text-emerald-700">{formatCurrency(row.amount)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -944,45 +949,45 @@ export function SWPValuation({ data }: { data: any }) {
   const totalWithdrawn = W * n_passed;
 
   return (
-    <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 space-y-1">
+    <div className="mt-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Initial Investment</span>
-        <span className="font-medium">{formatCurrency(P)}</span>
+        <span className="text-slate-500">Initial Investment</span>
+        <span className="font-medium text-slate-900">{formatCurrency(P)}</span>
       </div>
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Monthly Withdrawal</span>
-        <span className="font-medium text-red-600">- {formatCurrency(W)}</span>
+        <span className="text-slate-500">Monthly Withdrawal</span>
+        <span className="font-medium text-rose-600">- {formatCurrency(W)}</span>
       </div>
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Total Withdrawn</span>
-        <span className="font-medium">{formatCurrency(totalWithdrawn)}</span>
+        <span className="text-slate-500">Total Withdrawn</span>
+        <span className="font-medium text-slate-900">{formatCurrency(totalWithdrawn)}</span>
       </div>
-      <div className="flex flex-col gap-2 border-t pt-2 mt-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-semibold text-foreground flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
-            <span className="truncate">Remaining Balance ({rate}% p.a.)</span>
+      <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-3 mt-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+          <span className="font-semibold text-slate-900 flex items-center gap-1.5">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+            <span>Remaining Balance ({rate}% p.a.)</span>
           </span>
-          <span className="font-bold text-green-700 whitespace-nowrap">{formatCurrency(currentValue)}</span>
+          <span className="font-bold text-emerald-700 text-lg sm:text-base">{formatCurrency(currentValue)}</span>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto bg-white border-slate-200 text-slate-600 hover:bg-slate-50">
               <Calculator className="h-3 w-3 mr-2" /> View Projection
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
-            <DialogHeader><DialogTitle>SWP Balance Projection</DialogTitle></DialogHeader>
+          <DialogContent className="max-w-md max-h-[80vh] flex flex-col bg-white border-slate-200">
+            <DialogHeader><DialogTitle className="text-slate-900">SWP Balance Projection</DialogTitle></DialogHeader>
             <ScrollArea className="flex-1 overflow-y-auto pr-4">
               <Table>
                 <TableHeader>
-                  <TableRow><TableHead>Month</TableHead><TableHead>Date</TableHead><TableHead className="text-right">Balance (₹)</TableHead></TableRow>
+                  <TableRow className="border-slate-100"><TableHead className="text-slate-500">Month</TableHead><TableHead className="text-slate-500">Date</TableHead><TableHead className="text-right text-slate-500">Balance (₹)</TableHead></TableRow>
                 </TableHeader>
                 <TableBody>
                   {generateSWPProjection(P, W, rate, totalMonths, start).map((row) => (
-                    <TableRow key={row.month}>
-                      <TableCell>{row.month}</TableCell><TableCell>{row.dateStr}</TableCell>
-                      <TableCell className="text-right font-medium text-green-700">{formatCurrency(row.amount)}</TableCell>
+                    <TableRow key={row.month} className="border-slate-50">
+                      <TableCell className="text-slate-600">{row.month}</TableCell><TableCell className="text-slate-600">{row.dateStr}</TableCell>
+                      <TableCell className="text-right font-medium text-emerald-700">{formatCurrency(row.amount)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
@@ -1011,54 +1016,54 @@ export function STPValuation({ data }: { data: any }) {
   const targetValue = calculateSTPTargetValue(T, rateTarget, n_passed);
 
   return (
-    <div className="mt-2 rounded-md border bg-muted/40 px-3 py-2 space-y-1">
+    <div className="mt-2 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 space-y-1">
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Monthly Transfer</span>
-        <span className="font-medium">{formatCurrency(T)}</span>
+        <span className="text-slate-500">Monthly Transfer</span>
+        <span className="font-medium text-slate-900">{formatCurrency(T)}</span>
       </div>
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Source Balance ({rateSource}%)</span>
-        <span className="font-medium">{formatCurrency(sourceValue)}</span>
+        <span className="text-slate-500">Source Balance ({rateSource}%)</span>
+        <span className="font-medium text-slate-900">{formatCurrency(sourceValue)}</span>
       </div>
       <div className="flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">Target Balance ({rateTarget}%)</span>
-        <span className="font-medium text-green-600">{formatCurrency(targetValue)}</span>
+        <span className="text-slate-500">Target Balance ({rateTarget}%)</span>
+        <span className="font-medium text-emerald-600">{formatCurrency(targetValue)}</span>
       </div>
-      <div className="flex flex-col gap-2 border-t pt-2 mt-2">
-        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
-          <span className="font-semibold text-foreground flex items-center gap-1">
-            <TrendingUp className="h-3 w-3 text-green-600 flex-shrink-0" />
-            <span className="truncate">Total Combined Value</span>
+      <div className="flex flex-col gap-2 border-t border-slate-200/60 pt-3 mt-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-xs">
+          <span className="font-semibold text-slate-900 flex items-center gap-1.5">
+            <TrendingUp className="h-3.5 w-3.5 text-emerald-600 flex-shrink-0" />
+            <span>Total Combined Value</span>
           </span>
-          <span className="font-bold text-green-700 whitespace-nowrap">{formatCurrency(sourceValue + targetValue)}</span>
+          <span className="font-bold text-emerald-700 text-lg sm:text-base">{formatCurrency(sourceValue + targetValue)}</span>
         </div>
         <Dialog>
           <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto">
+            <Button variant="outline" size="sm" className="h-7 text-xs w-full sm:w-auto bg-white border-slate-200 text-slate-600 hover:bg-slate-50">
               <Calculator className="h-3 w-3 mr-2" /> View Projection
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
-            <DialogHeader><DialogTitle>STP Transfer Projection</DialogTitle></DialogHeader>
+          <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col bg-white border-slate-200">
+            <DialogHeader><DialogTitle className="text-slate-900">STP Transfer Projection</DialogTitle></DialogHeader>
             <ScrollArea className="flex-1 overflow-y-auto pr-4">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Month</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Source (₹)</TableHead>
-                    <TableHead className="text-right">Target (₹)</TableHead>
-                    <TableHead className="text-right font-bold">Total (₹)</TableHead>
+                  <TableRow className="border-slate-100">
+                    <TableHead className="text-slate-500">Month</TableHead>
+                    <TableHead className="text-slate-500">Date</TableHead>
+                    <TableHead className="text-right text-slate-500">Source (₹)</TableHead>
+                    <TableHead className="text-right text-slate-500">Target (₹)</TableHead>
+                    <TableHead className="text-right font-bold text-slate-500">Total (₹)</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {generateSTPProjection(P, T, rateSource, rateTarget, totalMonths, start).map((row) => (
-                    <TableRow key={row.month}>
-                      <TableCell>{row.month}</TableCell>
-                      <TableCell>{row.dateStr}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">{formatCurrency(row.source)}</TableCell>
-                      <TableCell className="text-right text-green-600">{formatCurrency(row.target)}</TableCell>
-                      <TableCell className="text-right font-bold text-green-700">{formatCurrency(row.total)}</TableCell>
+                    <TableRow key={row.month} className="border-slate-50">
+                      <TableCell className="text-slate-600">{row.month}</TableCell>
+                      <TableCell className="text-slate-600">{row.dateStr}</TableCell>
+                      <TableCell className="text-right text-slate-400">{formatCurrency(row.source)}</TableCell>
+                      <TableCell className="text-right text-emerald-600">{formatCurrency(row.target)}</TableCell>
+                      <TableCell className="text-right font-bold text-emerald-700">{formatCurrency(row.total)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>
