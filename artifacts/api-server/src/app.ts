@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser";
 import * as pinoHttpModule from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { db, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 
 // Diagnostic logging for Vercel
 if (process.env.NODE_ENV === "production") {
@@ -45,6 +47,24 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser((process.env.SESSION_SECRET as string) || "fallback-secret"));
+
+app.get("/api/healthz", (req, res) => {
+  res.json({ status: "ok" });
+});
+
+// TEMPORARY DEBUG ROUTE - REMOVE AFTER FIXING
+app.get("/api/debug-db", async (req, res) => {
+  try {
+    const users = await db.select({ username: usersTable.username }).from(usersTable);
+    res.json({
+      database_connected: true,
+      db_url_prefix: process.env.DATABASE_URL?.substring(0, 10) + "...",
+      users_found: users.map(u => u.username)
+    });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.get("/", (req: Request, res: Response) => {
   res.json({ message: "Financial Family API is running", status: "ok" });
