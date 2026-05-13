@@ -1,11 +1,5 @@
 import { db, usersTable } from "./index";
-import crypto from "crypto";
-
-const SESSION_SECRET = process.env.SESSION_SECRET || "fallback-secret";
-
-function hashPassword(password: string): string {
-  return crypto.createHmac("sha256", SESSION_SECRET).update(password).digest("hex");
-}
+import argon2 from "argon2";
 
 async function seed() {
   console.log("Seeding database...");
@@ -16,14 +10,24 @@ async function seed() {
     process.exit(0);
   }
 
+  // Create admin user
   await db.insert(usersTable).values({
     username: "admin",
-    passwordHash: hashPassword("admin123"),
+    passwordHash: await argon2.hash("admin123"),
     role: "admin",
     name: "Administrator",
   });
 
-  console.log("Admin user created: admin / admin123");
+  // Create ayush user (as requested by user)
+  await db.insert(usersTable).values({
+    username: "ayush",
+    passwordHash: await argon2.hash("ayush"),
+    role: "admin",
+    name: "Ayush Admin",
+  });
+
+  console.log("Seed data created successfully.");
+  console.log("Users: admin / admin123, ayush / ayush");
   process.exit(0);
 }
 

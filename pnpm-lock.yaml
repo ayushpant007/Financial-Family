@@ -570,6 +570,9 @@ importers:
 
   lib/db:
     dependencies:
+      argon2:
+        specifier: ^0.44.0
+        version: 0.44.0
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2

@@ -1,19 +1,16 @@
 import pg from "pg";
 import path from "path";
 import { fileURLToPath } from "url";
-import crypto from "crypto";
+import argon2 from "argon2";
 import { config } from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 config({ path: path.resolve(__dirname, "../../../.env") });
 
 const url = process.env.SUPABASE_DATABASE_URL || process.env.DATABASE_URL;
-const secret = process.env.SESSION_SECRET || "fallback-secret";
 
-console.log("Using SESSION_SECRET:", secret);
-
-function hash(password: string): string {
-  return crypto.createHmac("sha256", secret).update(password).digest("hex");
+async function hash(password: string): Promise<string> {
+  return await argon2.hash(password);
 }
 
 async function fix() {
@@ -36,13 +33,13 @@ async function fix() {
   for (const row of rows) {
     const username = row.username.toLowerCase();
     const password = passwords[username] ?? "admin123"; // default fallback
-    const h = hash(password);
+    const h = await hash(password);
     await client.query("UPDATE users SET password_hash = $1 WHERE id = $2", [h, row.id]);
     console.log(`✓ Reset password for '${row.username}' → '${password}'`);
   }
 
   console.log("\n✅ All passwords reset successfully.");
-  console.log("   Login with: <username> / admin123");
+  console.log("   Login with: ayush / ayush (or your specific password)");
   await client.end();
 }
 
