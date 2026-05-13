@@ -3,11 +3,8 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "main": "dist/index.mjs",
   "scripts": {
     "dev": "pnpm --filter @workspace/db run setup && tsx watch --env-file=../../.env src/index.ts",
-    "build": "node ./build.mjs",
-    "start": "node --env-file=../../.env --enable-source-maps ./dist/index.mjs",
     "typecheck": "echo skipping typecheck"
   },
   "dependencies": {
