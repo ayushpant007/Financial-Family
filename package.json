@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "build": "pnpm -r --if-present run build",
+    "build": "pnpm --filter @workspace/api-server run build",
     "typecheck:libs": "echo skipping libs typecheck",
     "typecheck": "echo skipping typecheck",
     "dev": "pnpm --parallel --filter @workspace/api-server --filter @workspace/wealth-mgmt run dev"
