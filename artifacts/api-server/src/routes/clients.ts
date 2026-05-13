@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, usersTable, clientsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { CreateClientBody, UpdateClientBody } from "@workspace/api-zod";
@@ -6,7 +6,7 @@ import { requireAdmin, requireAuth, hashPassword, createSession } from "../lib/a
 
 const router = Router();
 
-router.get("/clients", requireAdmin, async (req, res) => {
+router.get("/clients", requireAdmin, async (req: Request, res: Response) => {
   const clients = await db
     .select({
       id: clientsTable.id,
@@ -23,7 +23,7 @@ router.get("/clients", requireAdmin, async (req, res) => {
   res.json(clients.map(c => ({ ...c, createdAt: c.createdAt.toISOString() })));
 });
 
-router.post("/clients", requireAdmin, async (req, res) => {
+router.post("/clients", requireAdmin, async (req: Request, res: Response) => {
   const parsed = CreateClientBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body", details: parsed.error.issues });
@@ -61,7 +61,7 @@ router.post("/clients", requireAdmin, async (req, res) => {
   });
 });
 
-router.get("/clients/:clientId", requireAuth, async (req, res) => {
+router.get("/clients/:clientId", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });
@@ -96,7 +96,7 @@ router.get("/clients/:clientId", requireAuth, async (req, res) => {
   res.json({ ...client, createdAt: client.createdAt.toISOString() });
 });
 
-router.put("/clients/:clientId", requireAdmin, async (req, res) => {
+router.put("/clients/:clientId", requireAdmin, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });
@@ -142,7 +142,7 @@ router.put("/clients/:clientId", requireAdmin, async (req, res) => {
   });
 });
 
-router.delete("/clients/:clientId", requireAdmin, async (req, res) => {
+router.delete("/clients/:clientId", requireAdmin, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });

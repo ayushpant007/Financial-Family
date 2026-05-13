@@ -1,11 +1,11 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, clientsTable, assetsTable, liabilitiesTable, usersTable } from "@workspace/db";
 import { eq, sum, count } from "drizzle-orm";
 import { requireAuth, requireAdmin } from "../lib/auth";
 
 const router = Router();
 
-router.get("/clients/:clientId/summary", requireAuth, async (req, res) => {
+router.get("/clients/:clientId/summary", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });
@@ -58,7 +58,7 @@ router.get("/clients/:clientId/summary", requireAuth, async (req, res) => {
   });
 });
 
-router.get("/dashboard/overview", requireAdmin, async (req, res) => {
+router.get("/dashboard/overview", requireAdmin, async (req: Request, res: Response) => {
   const clients = await db
     .select({
       id: clientsTable.id,

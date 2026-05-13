@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, usersTable, userSecurityTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LoginBody } from "@workspace/api-zod";
@@ -6,7 +6,7 @@ import { hashPassword, hashMpin, verifyMpin, createSession, deleteSession, requi
 
 const router = Router();
 
-router.post("/auth/login", async (req, res) => {
+router.post("/auth/login", async (req: Request, res: Response) => {
   const parsed = LoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid request body" });
@@ -65,14 +65,14 @@ router.post("/auth/login", async (req, res) => {
   });
 });
 
-router.post("/auth/logout", async (req, res) => {
+router.post("/auth/logout", async (req: Request, res: Response) => {
   const token = req.cookies?.session;
   if (token) await deleteSession(token);
   res.clearCookie("session");
   res.json({ success: true, message: "Logged out" });
 });
 
-router.get("/auth/me", requireAuth, async (req, res) => {
+router.get("/auth/me", requireAuth, async (req: Request, res: Response) => {
   const session = (req as any).session;
   
   // Fetch user security info to check if MPIN is set
@@ -91,7 +91,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
   });
 });
 
-router.post("/auth/mpin", requireAuth, async (req, res) => {
+router.post("/auth/mpin", requireAuth, async (req: Request, res: Response) => {
   const { mpin } = req.body;
   if (!mpin || typeof mpin !== "string" || mpin.length !== 6) {
     res.status(400).json({ error: "Invalid MPIN. Must be exactly 6 digits." });
@@ -126,7 +126,7 @@ router.post("/auth/mpin", requireAuth, async (req, res) => {
   res.json({ success: true, message: "MPIN set successfully" });
 });
 
-router.post("/auth/verify-mpin", requireAuth, async (req, res) => {
+router.post("/auth/verify-mpin", requireAuth, async (req: Request, res: Response) => {
   const { mpin } = req.body;
   const userId = (req as any).userId;
 

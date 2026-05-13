@@ -1,8 +1,8 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 
 const router = Router();
 
-router.get("/stocks/price/:symbol", async (req, res) => {
+router.get("/stocks/price/:symbol", async (req: Request, res: Response) => {
   const { symbol } = req.params;
   if (!symbol || !/^[A-Z0-9&\-\.]+$/.test(symbol.toUpperCase())) {
     res.status(400).json({ error: "Invalid symbol" });
@@ -13,9 +13,9 @@ router.get("/stocks/price/:symbol", async (req, res) => {
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${ticker}?interval=1d&range=1d`;
 
   try {
-    const response = await fetch(url, {
+    const response = (await fetch(url, {
       headers: { "User-Agent": "Mozilla/5.0" },
-    });
+    })) as any;
 
     if (!response.ok) {
       res.status(502).json({ error: "Failed to fetch stock price" });
