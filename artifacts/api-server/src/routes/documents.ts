@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -28,7 +28,7 @@ const upload = multer({
 const router = Router();
 
 // Get all documents (Admin see all, Client see only theirs)
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", requireAuth, async (req: Request, res: Response) => {
   const { role, clientId } = (req as any).session;
 
   try {
@@ -62,7 +62,7 @@ router.get("/", requireAuth, async (req, res) => {
 });
 
 // Download original file for a document
-router.get("/:id/download", requireAuth, async (req, res) => {
+router.get("/:id/download", requireAuth, async (req: Request, res: Response) => {
   const { id } = req.params;
   const { role, clientId } = (req as any).session;
 
@@ -128,7 +128,7 @@ router.post("/upload", requireAuth, (req, res, next) => {
     }
     next();
   });
-}, async (req, res) => {
+}, async (req: Request, res: Response) => {
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
@@ -178,7 +178,7 @@ router.post("/upload", requireAuth, (req, res, next) => {
 });
 
 // Delete a document (and its extraction record + file from disk)
-router.delete("/:id", requireAuth, async (req, res) => {
+router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
   const { id } = req.params;
   const { role, clientId } = (req as any).session;
 

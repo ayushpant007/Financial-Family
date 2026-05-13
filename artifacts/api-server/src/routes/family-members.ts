@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, familyMembersTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { CreateFamilyMemberBody, UpdateFamilyMemberBody } from "@workspace/api-zod";
@@ -6,7 +6,7 @@ import { requireAdmin, requireAuth } from "../lib/auth";
 
 const router = Router();
 
-router.get("/clients/:clientId/family-members", requireAuth, async (req, res) => {
+router.get("/clients/:clientId/family-members", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });
@@ -31,7 +31,7 @@ router.get("/clients/:clientId/family-members", requireAuth, async (req, res) =>
   })));
 });
 
-router.post("/clients/:clientId/family-members", requireAuth, async (req, res) => {
+router.post("/clients/:clientId/family-members", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });
@@ -64,7 +64,7 @@ router.post("/clients/:clientId/family-members", requireAuth, async (req, res) =
   });
 });
 
-router.put("/clients/:clientId/family-members/:familyMemberId", requireAuth, async (req, res) => {
+router.put("/clients/:clientId/family-members/:familyMemberId", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   const familyMemberId = parseInt(req.params.familyMemberId as string);
   if (isNaN(clientId) || isNaN(familyMemberId)) {
@@ -106,7 +106,7 @@ router.put("/clients/:clientId/family-members/:familyMemberId", requireAuth, asy
   });
 });
 
-router.delete("/clients/:clientId/family-members/:familyMemberId", requireAuth, async (req, res) => {
+router.delete("/clients/:clientId/family-members/:familyMemberId", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   const familyMemberId = parseInt(req.params.familyMemberId as string);
   if (isNaN(clientId) || isNaN(familyMemberId)) {

@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, liabilitiesTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { CreateClientLiabilityBody, UpdateClientLiabilityBody } from "@workspace/api-zod";
@@ -6,7 +6,7 @@ import { requireAdmin, requireAuth } from "../lib/auth";
 
 const router = Router();
 
-router.get("/clients/:clientId/liabilities", requireAuth, async (req, res) => {
+router.get("/clients/:clientId/liabilities", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });
@@ -42,7 +42,7 @@ router.get("/clients/:clientId/liabilities", requireAuth, async (req, res) => {
   })));
 });
 
-router.post("/clients/:clientId/liabilities", requireAuth, async (req, res) => {
+router.post("/clients/:clientId/liabilities", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });
@@ -94,7 +94,7 @@ router.post("/clients/:clientId/liabilities", requireAuth, async (req, res) => {
   });
 });
 
-router.put("/clients/:clientId/liabilities/:liabilityId", requireAuth, async (req, res) => {
+router.put("/clients/:clientId/liabilities/:liabilityId", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   const liabilityId = parseInt(req.params.liabilityId as string);
   if (isNaN(clientId) || isNaN(liabilityId)) {
@@ -151,7 +151,7 @@ router.put("/clients/:clientId/liabilities/:liabilityId", requireAuth, async (re
   });
 });
 
-router.delete("/clients/:clientId/liabilities/:liabilityId", requireAuth, async (req, res) => {
+router.delete("/clients/:clientId/liabilities/:liabilityId", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   const liabilityId = parseInt(req.params.liabilityId as string);
   if (isNaN(clientId) || isNaN(liabilityId)) {

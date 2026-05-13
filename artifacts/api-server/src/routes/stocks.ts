@@ -3,7 +3,7 @@ import { Router, type Request, type Response } from "express";
 const router = Router();
 
 router.get("/stocks/price/:symbol", async (req: Request, res: Response) => {
-  const { symbol } = req.params;
+  const symbol = req.params.symbol as string;
   if (!symbol || !/^[A-Z0-9&\-\.]+$/.test(symbol.toUpperCase())) {
     res.status(400).json({ error: "Invalid symbol" });
     return;

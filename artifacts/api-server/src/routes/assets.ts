@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import { db, assetsTable, clientsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { CreateClientAssetBody, UpdateClientAssetBody } from "@workspace/api-zod";
@@ -149,7 +149,7 @@ function computeAssetValue(assetType: string, data: Record<string, unknown>): nu
   }
 }
 
-router.get("/clients/:clientId/assets", requireAuth, async (req, res) => {
+router.get("/clients/:clientId/assets", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });
@@ -179,7 +179,7 @@ router.get("/clients/:clientId/assets", requireAuth, async (req, res) => {
   })));
 });
 
-router.post("/clients/:clientId/assets", requireAuth, async (req, res) => {
+router.post("/clients/:clientId/assets", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   if (isNaN(clientId)) {
     res.status(400).json({ error: "Invalid client ID" });
@@ -229,7 +229,7 @@ router.post("/clients/:clientId/assets", requireAuth, async (req, res) => {
   });
 });
 
-router.put("/clients/:clientId/assets/:assetId", requireAuth, async (req, res) => {
+router.put("/clients/:clientId/assets/:assetId", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   const assetId = parseInt(req.params.assetId as string);
   if (isNaN(clientId) || isNaN(assetId)) {
@@ -281,7 +281,7 @@ router.put("/clients/:clientId/assets/:assetId", requireAuth, async (req, res) =
   });
 });
 
-router.delete("/clients/:clientId/assets/:assetId", requireAuth, async (req, res) => {
+router.delete("/clients/:clientId/assets/:assetId", requireAuth, async (req: Request, res: Response) => {
   const clientId = parseInt(req.params.clientId as string);
   const assetId = parseInt(req.params.assetId as string);
   if (isNaN(clientId) || isNaN(assetId)) {
