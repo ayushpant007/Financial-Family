@@ -6,6 +6,17 @@ import * as pinoHttpModule from "pino-http";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
+// Diagnostic logging for Vercel
+if (process.env.NODE_ENV === "production") {
+  console.log("Starting production server...");
+  if (!process.env.DATABASE_URL && !process.env.SUPABASE_DATABASE_URL) {
+    console.error("CRITICAL: DATABASE_URL is missing!");
+  }
+  if (!process.env.SESSION_SECRET) {
+    console.error("CRITICAL: SESSION_SECRET is missing!");
+  }
+}
+
 const pinoHttp = (pinoHttpModule as any).default || pinoHttpModule;
 
 const app: Express = express();

@@ -21,9 +21,13 @@ if (!connectionString) {
   );
 }
 
+const isProduction = process.env.NODE_ENV === "production";
+
 export const pool = new Pool({
   connectionString,
-  ssl: process.env.SUPABASE_DATABASE_URL ? { rejectUnauthorized: false } : undefined,
+  ssl: (isProduction || process.env.SUPABASE_DATABASE_URL) 
+    ? { rejectUnauthorized: false } 
+    : undefined,
 });
 export const db = drizzle(pool, { schema });
 
