@@ -12,7 +12,7 @@ export function hashPassword(password: string): string {
   return crypto.createHmac("sha256", SESSION_SECRET).update(password).digest("hex");
 }
 
-export async function hashMpin(mpin: string): string {
+export async function hashMpin(mpin: string): Promise<string> {
   return argon2.hash(mpin);
 }
 
@@ -43,7 +43,7 @@ export async function createSession(
   return token;
 }
 
-export async function getSession(token: string) {
+export async function getSession(token: string): Promise<any> {
   const [session] = await db
     .select()
     .from(sessionsTable)
@@ -70,11 +70,11 @@ export async function getSession(token: string) {
   return session;
 }
 
-export async function deleteSession(token: string) {
+export async function deleteSession(token: string): Promise<void> {
   await db.delete(sessionsTable).where(eq(sessionsTable.token, token));
 }
 
-export async function cleanExpiredSessions() {
+export async function cleanExpiredSessions(): Promise<void> {
   await db.delete(sessionsTable).where(lt(sessionsTable.expiresAt, new Date()));
 }
 
