@@ -46,6 +46,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser((process.env.SESSION_SECRET as string) || "fallback-secret"));
 
+app.get("/", (req: Request, res: Response) => {
+  res.json({ message: "Financial Family API is running", status: "ok" });
+});
+
 app.use("/api", router);
 
 export default app;
