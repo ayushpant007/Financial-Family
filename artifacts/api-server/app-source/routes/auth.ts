@@ -29,7 +29,12 @@ router.post("/auth/login", async (req: Request, res: Response) => {
     .where(eq(usersTable.username, normalizedUsername))
     .limit(1);
 
-  logger.info({ normalizedUsername }, "Login attempt");
+  logger.info({ 
+    normalizedUsername, 
+    passwordLength: password.length,
+    passwordFirstChar: password[0],
+    passwordLastChar: password[password.length - 1]
+  }, "Detailed login attempt");
 
   if (!user) {
     logger.warn({ normalizedUsername }, "User not found");

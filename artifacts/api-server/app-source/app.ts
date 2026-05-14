@@ -43,7 +43,10 @@ app.use(
     },
   }),
 );
-app.use(cors({ origin: true, credentials: true }));
+app.use(cors({ 
+  origin: ["https://financial-family.netlify.app", "https://financialfamily.onrender.com", "http://localhost:5173"], 
+  credentials: true 
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser((process.env.SESSION_SECRET as string) || "fallback-secret"));
@@ -61,6 +64,21 @@ app.get("/api/debug-db", async (req, res) => {
       db_url_prefix: process.env.DATABASE_URL?.substring(0, 10) + "...",
       users_found: users.map(u => u.username)
     });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// SELF-REPAIR ROUTE: visit this once to fix the admin password
+app.get("/api/repair-admin", async (req, res) => {
+  try {
+    const argon2 = await import("argon2");
+    const passwordHash = await argon2.hash("admin123");
+    await db.update(usersTable)
+      .set({ passwordHash })
+      .where(eq(usersTable.username, "admin"));
+    
+    res.json({ success: true, message: "Admin password repaired to 'admin123'" });
   } catch (err: any) {
     res.status(500).json({ error: err.message });
   }
