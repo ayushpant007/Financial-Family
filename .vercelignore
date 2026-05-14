@@ -1,6 +1,0 @@
-# Ignore source code directories from being deployed as functions
-# Vercel will still use these for the build process, but won't try to execute them.
-artifacts/
-lib/
-packages/
-node_modules/
