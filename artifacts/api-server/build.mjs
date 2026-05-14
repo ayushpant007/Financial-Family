@@ -15,7 +15,7 @@ async function buildAll() {
   // We don't delete the whole api dir because it's at root now
   
   await esbuild({
-    entryPoints: [path.resolve(artifactDir, "src/index.ts")],
+    entryPoints: [path.resolve(artifactDir, "app-source/index.ts")],
     platform: "node",
     bundle: true,
     format: "esm",
