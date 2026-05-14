@@ -28,8 +28,19 @@ router.post("/auth/login", async (req: Request, res: Response) => {
     .where(eq(usersTable.username, normalizedUsername))
     .limit(1);
 
-  if (!user || !(await verifyPassword(password, user.passwordHash))) {
-    res.status(401).json({ error: "Invalid username or password" });
+  logger.info({ normalizedUsername }, "Login attempt");
+
+  if (!user) {
+    logger.warn({ normalizedUsername }, "User not found");
+    res.status(401).json({ error: "Invalid credentials. Please contact your advisor." });
+    return;
+  }
+
+  const isPasswordValid = await verifyPassword(password, user.passwordHash);
+  logger.info({ normalizedUsername, isPasswordValid }, "Password verification result");
+
+  if (!isPasswordValid) {
+    res.status(401).json({ error: "Invalid credentials. Please contact your advisor." });
     return;
   }
 

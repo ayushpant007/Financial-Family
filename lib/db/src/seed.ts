@@ -4,29 +4,30 @@ import argon2 from "argon2";
 async function seed() {
   console.log("Seeding database...");
 
-  const existing = await db.select().from(usersTable).limit(1);
-  if (existing.length > 0) {
-    console.log("Database already seeded, skipping.");
-    process.exit(0);
-  }
-
-  // Create admin user
+  // Use upsert to update passwords if users already exist
+  const adminPassword = await argon2.hash("admin123");
   await db.insert(usersTable).values({
     username: "admin",
-    passwordHash: await argon2.hash("admin123"),
+    passwordHash: adminPassword,
     role: "admin",
     name: "Administrator",
+  }).onConflictDoUpdate({
+    target: usersTable.username,
+    set: { passwordHash: adminPassword }
   });
 
-  // Create ayush user (as requested by user)
+  const ayushPassword = await argon2.hash("ayush");
   await db.insert(usersTable).values({
     username: "ayush",
-    passwordHash: await argon2.hash("ayush"),
+    passwordHash: ayushPassword,
     role: "admin",
     name: "Ayush Admin",
+  }).onConflictDoUpdate({
+    target: usersTable.username,
+    set: { passwordHash: ayushPassword }
   });
 
-  console.log("Seed data created successfully.");
+  console.log("Seed data updated successfully.");
   console.log("Users: admin / admin123, ayush / ayush");
   process.exit(0);
 }

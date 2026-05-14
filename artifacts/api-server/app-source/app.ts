@@ -66,10 +66,18 @@ app.get("/api/debug-db", async (req, res) => {
   }
 });
 
-app.get("/", (req: Request, res: Response) => {
-  res.json({ message: "Financial Family API is running", status: "ok" });
-});
+// Serve static files from the public directory
+app.use(express.static("public"));
 
 app.use("/api", router);
+
+// SPA fallback: Serve index.html for any other route
+app.get("*", (req: Request, res: Response) => {
+  // If it's an API route that wasn't handled, let it 404
+  if (req.url.startsWith("/api/")) {
+    return res.status(404).json({ error: "Not Found" });
+  }
+  res.sendFile("index.html", { root: "public" });
+});
 
 export default app;
