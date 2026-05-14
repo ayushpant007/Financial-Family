@@ -3,6 +3,7 @@ import { db, usersTable, userSecurityTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LoginBody } from "@workspace/api-zod";
 import { verifyPassword, hashMpin, verifyMpin, createSession, deleteSession, requireAuth } from "../lib/auth";
+import { logger } from "../lib/logger";
 
 const router = Router();
 
