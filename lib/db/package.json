@@ -16,15 +16,15 @@
   "dependencies": {
     "argon2": "^0.44.0",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "catalog:",
+    "drizzle-orm": "^0.40.0",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.20.0",
-    "zod": "catalog:"
+    "zod": "^3.24.2"
   },
   "devDependencies": {
-    "@types/node": "catalog:",
+    "@types/node": "^22.13.9",
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9",
-    "tsx": "catalog:"
+    "tsx": "^4.19.3"
   }
 }
