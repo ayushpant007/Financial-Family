@@ -2,6 +2,9 @@
 
 # compiled output
 dist
+api
+server-dist
+public
 tmp
 out-tsc
 *.tsbuildinfo

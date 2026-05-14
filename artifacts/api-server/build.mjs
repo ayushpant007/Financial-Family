@@ -11,7 +11,7 @@ globalThis.require = createRequire(import.meta.url);
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
 async function buildAll() {
-  const distDir = path.resolve(artifactDir, "../../api");
+  const distDir = path.resolve(artifactDir, "../../server-dist");
   // We don't delete the whole api dir because it's at root now
   
   await esbuild({
