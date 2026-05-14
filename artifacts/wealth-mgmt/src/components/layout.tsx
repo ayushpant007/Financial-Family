@@ -48,7 +48,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       onSuccess: () => {
         // Clear all queries to ensure no stale user data persists
         queryClient.clear();
-        setLocation("/login");
+        setLocation("/");
       },
     });
   };
@@ -83,7 +83,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         } ${isMobile ? "rounded-r-3xl" : ""}`}
       >
         <div className="flex h-20 items-center justify-between gap-3 border-b border-slate-200 px-6">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer">
             <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xl shadow-slate-200/60 overflow-hidden border border-slate-100 p-1">
               <img src="/logo.jpg" alt="Financial Family" className="h-full w-full object-contain" />
             </div>
@@ -91,7 +91,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <span className="text-sm font-bold tracking-tight text-slate-900 uppercase">Financial</span>
               <span className="text-xs font-semibold text-secondary -mt-1 uppercase tracking-widest">Family</span>
             </div>
-          </div>
+          </Link>
           {isMobile && (
             <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(false)} className="rounded-full">
                <PanelLeft className="h-5 w-5 text-slate-500" />

@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { db, usersTable, userSecurityTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { LoginBody } from "@workspace/api-zod";
-import { hashPassword, hashMpin, verifyMpin, createSession, deleteSession, requireAuth } from "../lib/auth";
+import { verifyPassword, hashMpin, verifyMpin, createSession, deleteSession, requireAuth } from "../lib/auth";
 
 const router = Router();
 
@@ -28,7 +28,7 @@ router.post("/auth/login", async (req: Request, res: Response) => {
     .where(eq(usersTable.username, normalizedUsername))
     .limit(1);
 
-  if (!user || user.passwordHash !== hashPassword(password)) {
+  if (!user || !(await verifyPassword(password, user.passwordHash))) {
     res.status(401).json({ error: "Invalid username or password" });
     return;
   }

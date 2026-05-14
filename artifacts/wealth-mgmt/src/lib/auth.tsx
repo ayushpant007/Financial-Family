@@ -42,7 +42,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLocation("/login");
       }
     }
-    if (user) {
+    if (user || isLandingPage || location === "/login") {
       redirectedRef.current = false;
     }
   }, [isLoading, error, user, location, setLocation]);

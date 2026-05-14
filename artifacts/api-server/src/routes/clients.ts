@@ -39,7 +39,7 @@ router.post("/clients", requireAdmin, async (req: Request, res: Response) => {
 
   const [user] = await db.insert(usersTable).values({
     username,
-    passwordHash: hashPassword(password),
+    passwordHash: await hashPassword(password),
     role: "client",
     name,
   }).returning();

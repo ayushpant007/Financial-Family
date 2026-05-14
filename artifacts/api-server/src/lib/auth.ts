@@ -8,8 +8,12 @@ const SESSION_SECRET = process.env.SESSION_SECRET || "fallback-secret";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_RENEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
 
-export function hashPassword(password: string): string {
-  return crypto.createHmac("sha256", SESSION_SECRET).update(password).digest("hex");
+export async function hashPassword(password: string): Promise<string> {
+  return argon2.hash(password);
+}
+
+export async function verifyPassword(password: string, hash: string): Promise<boolean> {
+  return argon2.verify(hash, password);
 }
 
 export async function hashMpin(mpin: string): Promise<string> {

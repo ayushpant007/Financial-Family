@@ -47,7 +47,7 @@ export default function LoginPage() {
       <div className="flex relative w-full lg:w-[58%] min-h-[300px] lg:h-full flex-col p-8 sm:p-16 xl:p-24 justify-between border-b border-white/5 lg:border-b-0 lg:border-r backdrop-blur-[2px] z-10">
         
         {/* Logo Area */}
-        <div className="relative z-10 flex items-center gap-4">
+        <Link href="/" className="relative z-10 flex items-center gap-4 hover:opacity-80 transition-opacity cursor-pointer">
           <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center overflow-hidden shadow-lg shadow-gold/20">
             <img src="/logo.jpg" alt="Financial Family" className="w-8 h-8 object-contain" />
           </div>
@@ -55,7 +55,7 @@ export default function LoginPage() {
             <div className="text-[13px] font-bold tracking-[0.25em] text-white uppercase font-['DM_Sans']">Financial Family</div>
             <div className="text-[10px] font-light tracking-[0.2em] text-slate-500 uppercase font-['DM_Sans']">Private Office</div>
           </div>
-        </div>
+        </Link>
 
         {/* Center Text Area */}
         <div className="relative z-10 max-w-2xl">
