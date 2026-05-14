@@ -72,7 +72,7 @@ app.use(express.static("public"));
 app.use("/api", router);
 
 // SPA fallback: Serve index.html for any other route
-app.get("(.*)", (req: Request, res: Response) => {
+app.get("*path", (req: Request, res: Response) => {
   // If it's an API route that wasn't handled, let it 404
   if (req.url.startsWith("/api/")) {
     return res.status(404).json({ error: "Not Found" });
