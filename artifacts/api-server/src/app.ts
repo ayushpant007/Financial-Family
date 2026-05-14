@@ -3,7 +3,7 @@ import express, { type Express, type Request, type Response } from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import * as pinoHttpModule from "pino-http";
-import router from "./routes";
+import router from "./routes/index.js";
 import { logger } from "./lib/logger";
 import { db, usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
