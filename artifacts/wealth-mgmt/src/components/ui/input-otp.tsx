@@ -4,19 +4,23 @@ import { Minus } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 
+const InputOTPExtraContext = React.createContext<{ type?: string }>({})
+
 const InputOTP = React.forwardRef<
   React.ElementRef<typeof OTPInput>,
   React.ComponentPropsWithoutRef<typeof OTPInput>
 >(({ className, containerClassName, ...props }, ref) => (
-  <OTPInput
-    ref={ref}
-    containerClassName={cn(
-      "flex items-center gap-2 has-[:disabled]:opacity-50",
-      containerClassName
-    )}
-    className={cn("disabled:cursor-not-allowed", className)}
-    {...props}
-  />
+  <InputOTPExtraContext.Provider value={{ type: props.type }}>
+    <OTPInput
+      ref={ref}
+      containerClassName={cn(
+        "flex items-center gap-2 has-[:disabled]:opacity-50",
+        containerClassName
+      )}
+      className={cn("disabled:cursor-not-allowed", className)}
+      {...props}
+    />
+  </InputOTPExtraContext.Provider>
 ))
 InputOTP.displayName = "InputOTP"
 
@@ -33,8 +37,14 @@ const InputOTPSlot = React.forwardRef<
   React.ComponentPropsWithoutRef<"div"> & { index: number }
 >(({ index, className, ...props }, ref) => {
   const inputOTPContext = React.useContext(OTPInputContext)
+  const { type } = React.useContext(InputOTPExtraContext)
+  
+  if (!inputOTPContext || !inputOTPContext.slots[index]) {
+    return null
+  }
+
   const { char, hasFakeCaret, isActive } = inputOTPContext.slots[index]
-  const isPassword = inputOTPContext.props.type === "password" || (inputOTPContext.props as any).password
+  const isPassword = type === "password"
 
   return (
     <div

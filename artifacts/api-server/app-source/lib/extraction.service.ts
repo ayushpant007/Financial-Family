@@ -1,5 +1,7 @@
 import mammoth from 'mammoth';
 import fs from 'fs';
+import path from 'path';
+import { createRequire } from 'module';
 
 export class ExtractionService {
   /**
@@ -24,28 +26,50 @@ export class ExtractionService {
   }
 
   private static async extractFromPdf(buffer: Buffer, password?: string): Promise<string> {
-    // Lazy require avoids the test-file read that pdf-parse v1 does at import time
-    const { default: pdfParse } = await import('pdf-parse');
-    const options: Record<string, unknown> = {};
-    if (password) {
-      options.password = password;
-    }
-    let data: any;
+    const require = createRequire(import.meta.url);
+    // Use the bundled pdf.js from pdf-parse but call it correctly with password support
+    const PDFJS = require('pdf-parse/lib/pdf.js/v1.10.100/build/pdf.js');
+    PDFJS.disableWorker = true;
+
+    let doc: any;
     try {
-      data = await pdfParse(buffer, options);
+      doc = await PDFJS.getDocument({
+        data: new Uint8Array(buffer),
+        password: password
+      });
     } catch (err: any) {
-      // Re-throw with a clear message so the route can surface it to the client
       const msg = err?.message || String(err);
       if (msg.toLowerCase().includes('password') || msg.toLowerCase().includes('encrypted')) {
+        if (password) {
+          throw new Error('INVALID_PASSWORD');
+        }
         throw new Error('PASSWORD_REQUIRED');
       }
       throw err;
     }
-    if (!data.text || data.text.trim().length < 10) {
-      console.log('PDF text layer empty or too short (possibly a scanned PDF)');
-      return data.text || '';
+
+    try {
+      let text = '';
+      const counter = doc.numPages;
+      
+      for (let i = 1; i <= counter; i++) {
+        const page = await doc.getPage(i);
+        const content = await page.getTextContent();
+        const pageText = content.items.map((item: any) => item.str).join(' ');
+        text += pageText + '\n';
+      }
+
+      await doc.destroy();
+      
+      if (text.trim().length < 10) {
+        console.log('PDF text layer empty or too short (possibly a scanned PDF)');
+      }
+      
+      return text;
+    } catch (err) {
+      console.error('PDF extraction error:', err);
+      return '';
     }
-    return data.text;
   }
 
   private static async extractFromDocx(buffer: Buffer): Promise<string> {

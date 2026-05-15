@@ -173,6 +173,10 @@ router.post("/upload", requireAuth, (req, res, next) => {
       res.status(422).json({ error: "PASSWORD_REQUIRED", message: "This PDF is password-protected. Please provide the password to unlock it." });
       return;
     }
+    if (error.message === "INVALID_PASSWORD") {
+      res.status(422).json({ error: "INVALID_PASSWORD", message: "Invalid password. Please try again." });
+      return;
+    }
     res.status(500).json({ error: `Upload failed: ${error.message}` });
   }
 });

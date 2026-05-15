@@ -109,6 +109,9 @@ export function DocumentsView({ isAdmin = false }) {
       if (body.error === "PASSWORD_REQUIRED") {
         throw Object.assign(new Error(body.message), { code: "PASSWORD_REQUIRED" });
       }
+      if (body.error === "INVALID_PASSWORD") {
+        throw Object.assign(new Error(body.message), { code: "INVALID_PASSWORD" });
+      }
       throw new Error(body.error || "Upload failed");
     }
     return body;
@@ -131,6 +134,15 @@ export function DocumentsView({ isAdmin = false }) {
     onError: (error: any) => {
       if (error.code === "PASSWORD_REQUIRED") {
         // Open the password dialog and keep the formData so we can retry
+        setPasswordPromptOpen(true);
+        return;
+      }
+      if (error.code === "INVALID_PASSWORD") {
+        toast({
+          variant: "destructive",
+          title: "Invalid Password",
+          description: "The password you entered is incorrect. Please try again.",
+        });
         setPasswordPromptOpen(true);
         return;
       }
