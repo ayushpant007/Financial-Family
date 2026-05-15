@@ -1,34 +1,24 @@
 import { db, usersTable } from "./index";
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 
 async function seed() {
   console.log("Seeding database...");
 
-  // Use upsert to update passwords if users already exist
-  const adminPassword = await argon2.hash("admin123");
+  const existing = await db.select({ id: usersTable.id }).from(usersTable).limit(1);
+  if (existing.length > 0) {
+    console.log("Database already seeded, skipping.");
+    process.exit(0);
+  }
+
+  const adminHash = await bcrypt.hash("admin123", 10);
   await db.insert(usersTable).values({
     username: "admin",
-    passwordHash: adminPassword,
+    passwordHash: adminHash,
     role: "admin",
     name: "Administrator",
-  }).onConflictDoUpdate({
-    target: usersTable.username,
-    set: { passwordHash: adminPassword }
   });
 
-  const ayushPassword = await argon2.hash("ayush");
-  await db.insert(usersTable).values({
-    username: "ayush",
-    passwordHash: ayushPassword,
-    role: "admin",
-    name: "Ayush Admin",
-  }).onConflictDoUpdate({
-    target: usersTable.username,
-    set: { passwordHash: ayushPassword }
-  });
-
-  console.log("Seed data updated successfully.");
-  console.log("Users: admin / admin123, ayush / ayush");
+  console.log("Admin user created: admin / admin123");
   process.exit(0);
 }
 

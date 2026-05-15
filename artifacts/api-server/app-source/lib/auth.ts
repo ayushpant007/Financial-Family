@@ -1,27 +1,45 @@
 import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
-import argon2 from "argon2";
+import bcrypt from "bcryptjs";
 import { db, sessionsTable } from "@workspace/db";
 import { eq, lt } from "drizzle-orm";
 
-const SESSION_SECRET = process.env.SESSION_SECRET || "fallback-secret";
 const SESSION_DURATION_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_RENEW_THRESHOLD_MS = 7 * 24 * 60 * 60 * 1000;
+const BCRYPT_ROUNDS = 10;
 
 export async function hashPassword(password: string): Promise<string> {
-  return argon2.hash(password);
+  return bcrypt.hash(password, BCRYPT_ROUNDS);
 }
 
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
-  return argon2.verify(hash, password);
+  // bcrypt hash
+  if (hash.startsWith("$2")) {
+    return bcrypt.compare(password, hash);
+  }
+  // argon2 hash — treat as invalid, user must reset password
+  if (hash.startsWith("$argon2")) {
+    return false;
+  }
+  // legacy HMAC-SHA256 fallback
+  const SESSION_SECRET = process.env.SESSION_SECRET || "fallback-secret";
+  const hmac = crypto.createHmac("sha256", SESSION_SECRET).update(password).digest("hex");
+  return hmac === hash;
 }
 
 export async function hashMpin(mpin: string): Promise<string> {
-  return argon2.hash(mpin);
+  return bcrypt.hash(mpin, BCRYPT_ROUNDS);
 }
 
 export async function verifyMpin(hash: string, mpin: string): Promise<boolean> {
-  return argon2.verify(hash, mpin);
+  if (hash.startsWith("$2")) {
+    return bcrypt.compare(mpin, hash);
+  }
+  // argon2 MPIN — no longer verifiable, needs reset
+  if (hash.startsWith("$argon2")) {
+    return false;
+  }
+  return false;
 }
 
 export async function createSession(
