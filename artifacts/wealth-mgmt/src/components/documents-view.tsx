@@ -51,6 +51,7 @@ export function DocumentsView({ isAdmin = false }) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [targetClientId, setTargetClientId] = React.useState<string>("");
   const [isUploading, setIsUploading] = React.useState(false);
@@ -135,6 +136,9 @@ export function DocumentsView({ isAdmin = false }) {
         title: "Success",
         description: "Document uploaded and processed successfully",
       });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       setSelectedFile(null);
       setTargetClientId("");
       setPdfPassword("");
@@ -283,23 +287,45 @@ export function DocumentsView({ isAdmin = false }) {
   const handleMpinSubmit = () => {
     if (mpinValue.length !== 6) return;
 
+    // Open a blank window immediately to satisfy the browser's interaction check
+    // This must happen in the same call stack as the user's click/Enter
+    const newWindow = window.open("", "_blank");
+    if (newWindow) {
+      newWindow.document.write(`
+        <html>
+          <body style="display:flex;align-items:center;justify-center;height:100vh;font-family:sans-serif;color:#64748b;background:#f8fafc;">
+            <div style="text-align:center;width:100%;">
+              <p>Unlocking document...</p>
+            </div>
+          </body>
+        </html>
+      `);
+    }
+
     verifyMpinMutation.mutate(mpinValue, {
       onSuccess: () => {
         setIsMpinVerifiedInSession(true);
         if (mpinActionDoc) {
+          const downloadUrl = `/api/documents/${mpinActionDoc.id}/download`;
+          
+          if (newWindow && !newWindow.closed) {
+            newWindow.location.href = downloadUrl;
+          } else {
+            // Fallback if the initial open failed or was closed
+            window.open(downloadUrl, "_blank");
+          }
+          
           toast({
             title: "Verification Successful",
-            description: "Opening file in 5 seconds...",
+            description: "Document unlocked and opened.",
           });
-          setTimeout(() => {
-            window.open(`/api/documents/${mpinActionDoc.id}/download`, "_blank");
-          }, 5000);
         }
         setMpinPromptOpen(false);
         setMpinValue("");
         setMpinActionDoc(null);
       },
       onError: (err: any) => {
+        if (newWindow) newWindow.close();
         setShouldShake(true);
         setTimeout(() => setShouldShake(false), 500);
         setMpinValue(""); // clear on error
@@ -374,6 +400,7 @@ export function DocumentsView({ isAdmin = false }) {
                 <p className="text-xs text-slate-500 mt-1">Max 5MB</p>
                 <input 
                   id="file-upload"
+                  ref={fileInputRef}
                   type="file" 
                   className="hidden" 
                   accept=".pdf,.docx,.jpg,.jpeg,.png"

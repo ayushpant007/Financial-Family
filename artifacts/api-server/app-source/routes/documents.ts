@@ -131,12 +131,13 @@ router.post("/upload", requireAuth, (req, res, next) => {
     next();
   });
 }, async (req: Request, res: Response) => {
+  console.log('🚀 Upload route hit!');
   if (!req.file) {
     res.status(400).json({ error: "No file uploaded" });
     return;
   }
 
-  const { role, clientId } = (req as any).session;
+  const { role, clientId, name } = (req as any).session;
   const targetClientId = role === "admin" ? parseInt(req.body.clientId) : clientId;
 
   if (!targetClientId) {
@@ -153,13 +154,9 @@ router.post("/upload", requireAuth, (req, res, next) => {
     // password again (user is asked exactly once, during upload).
     if (fileExtension === 'pdf') {
       await ExtractionService.extractText(filePath, fileExtension, password);
-
-      if (password) {
-        const encryptedBytes = fs.readFileSync(filePath);
-        const pdfDoc = await PDFDocument.load(encryptedBytes, { password });
-        const decryptedBytes = await pdfDoc.save();
-        fs.writeFileSync(filePath, decryptedBytes);
-      }
+      // NOTE: We don't use pdf-lib to "strip" the password here because pdf-lib 
+      // does not support decryption. The file is stored in its original encrypted 
+      // state after successful password verification by ExtractionService.
     } else if (fileExtension === 'docx') {
       const rawBytes = fs.readFileSync(filePath);
 
@@ -183,6 +180,28 @@ router.post("/upload", requireAuth, (req, res, next) => {
       storagePath: filePath,
       fileType: fileExtension,
     }).returning();
+
+    // Trigger Google Drive Sync in the background
+    (async () => {
+      try {
+        const { GoogleDriveService } = await import("../lib/google-drive.service");
+        
+        let folderName = name; // Default to current user's name
+        
+        // If admin is uploading for a client, get the client's name for the folder
+        if (role === "admin") {
+          const [client] = await db.select({ name: clientsTable.name })
+            .from(clientsTable)
+            .where(eq(clientsTable.id, targetClientId))
+            .limit(1);
+          if (client) folderName = client.name;
+        }
+
+        await GoogleDriveService.uploadFile(filePath, req.file.originalname, folderName);
+      } catch (err) {
+        console.error("Background Google Drive sync failed:", err);
+      }
+    })();
 
     res.json({ 
       success: true, 
