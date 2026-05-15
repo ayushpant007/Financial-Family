@@ -2,6 +2,7 @@ import mammoth from 'mammoth';
 import fs from 'fs';
 import path from 'path';
 import { createRequire } from 'module';
+import { isOleCfb } from './docx-decrypt.js';
 
 export class ExtractionService {
   /**
@@ -15,7 +16,7 @@ export class ExtractionService {
       case 'pdf':
         return this.extractFromPdf(buffer, password);
       case 'docx':
-        return this.extractFromDocx(buffer);
+        return this.extractFromDocx(buffer, password);
       case 'jpg':
       case 'jpeg':
       case 'png':
@@ -72,7 +73,14 @@ export class ExtractionService {
     }
   }
 
-  private static async extractFromDocx(buffer: Buffer): Promise<string> {
+  private static async extractFromDocx(buffer: Buffer, password?: string): Promise<string> {
+    // Detect OLE/CFB wrapping — the signature of an encrypted Office document
+    if (isOleCfb(buffer)) {
+      if (!password) throw new Error('PASSWORD_REQUIRED');
+      // If password supplied, the caller should have already decrypted the buffer
+      // before reaching here. If we still see CFB here, the password was wrong.
+      throw new Error('INVALID_PASSWORD');
+    }
     const result = await mammoth.extractRawText({ buffer });
     return result.value;
   }

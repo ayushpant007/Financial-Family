@@ -3,6 +3,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { PDFDocument } from "pdf-lib";
+import { decryptOOXML, isOleCfb } from "../lib/docx-decrypt.js";
 import { db, clientsTable } from "@workspace/db";
 import { documentsTable } from "@workspace/db/schema";
 import { documentExtractedTextTable } from "@workspace/db/schema";
@@ -148,18 +149,32 @@ router.post("/upload", requireAuth, (req, res, next) => {
   const password: string | undefined = req.body.password || undefined;
 
   try {
-    // For PDFs, validate password (and decrypt if password-protected)
+    // Validate password and strip encryption so the file never needs a
+    // password again (user is asked exactly once, during upload).
     if (fileExtension === 'pdf') {
       await ExtractionService.extractText(filePath, fileExtension, password);
 
-      // If a password was provided and extraction succeeded, strip the
-      // password from the PDF so it opens freely after MPIN verification
       if (password) {
         const encryptedBytes = fs.readFileSync(filePath);
         const pdfDoc = await PDFDocument.load(encryptedBytes, { password });
         const decryptedBytes = await pdfDoc.save();
         fs.writeFileSync(filePath, decryptedBytes);
       }
+    } else if (fileExtension === 'docx') {
+      const rawBytes = fs.readFileSync(filePath);
+
+      if (isOleCfb(rawBytes)) {
+        // File is an encrypted OLE/CFB container — password required
+        if (!password) {
+          throw new Error('PASSWORD_REQUIRED');
+        }
+        // Decrypt → store unlocked DOCX so viewing never requires password
+        const decryptedBytes = await decryptOOXML(rawBytes, password);
+        fs.writeFileSync(filePath, decryptedBytes);
+        // Verify the decrypted bytes are readable by mammoth
+        await ExtractionService.extractText(filePath, fileExtension);
+      }
+      // Non-encrypted DOCX: extraction runs normally (no password needed)
     }
 
     const [document] = await db.insert(documentsTable).values({
