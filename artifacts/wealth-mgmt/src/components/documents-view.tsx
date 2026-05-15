@@ -68,12 +68,22 @@ export function DocumentsView({ isAdmin = false }) {
   const [mpinActionDoc, setMpinActionDoc] = React.useState<Document | null>(null);
   
   const [setMpinOpen, setSetMpinOpen] = React.useState(false);
+  const [isMpinGateMode, setIsMpinGateMode] = React.useState(false);
   const [newMpin, setNewMpin] = React.useState("");
   const [isSettingMpin, setIsSettingMpin] = React.useState(false);
   
   // Session-level verification
   const [isMpinVerifiedInSession, setIsMpinVerifiedInSession] = React.useState(false);
   const [shouldShake, setShouldShake] = React.useState(false);
+
+  // Page-level MPIN gate: auto-open setup if user has no MPIN yet
+  React.useEffect(() => {
+    const currentUser = user as UserWithMpin;
+    if (currentUser && currentUser.hasMpin === false) {
+      setIsMpinGateMode(true);
+      setSetMpinOpen(true);
+    }
+  }, [user]);
 
   const { data: documents, isLoading } = useQuery<Document[]>({
     queryKey: ["documents"],
@@ -206,9 +216,15 @@ export function DocumentsView({ isAdmin = false }) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      toast({ title: "Success", description: "MPIN set successfully." });
+      toast({
+        title: isMpinGateMode ? "MPIN Created" : "MPIN Updated",
+        description: isMpinGateMode
+          ? "Your MPIN is set. Enter it each time you want to view a document."
+          : "Your MPIN has been updated successfully.",
+      });
       setSetMpinOpen(false);
       setNewMpin("");
+      setIsMpinGateMode(false);
     },
     onError: (err: any) => {
       toast({ variant: "destructive", title: "Error", description: err.message });
@@ -253,24 +269,13 @@ export function DocumentsView({ isAdmin = false }) {
   };
 
   const handleViewFile = (doc: Document) => {
-    // If already verified in this session, skip prompt
+    // If already verified in this session, open immediately
     if (isMpinVerifiedInSession) {
       window.open(`/api/documents/${doc.id}/download`, "_blank");
       return;
     }
 
-    // Check if user has MPIN set
-    const currentUser = user as UserWithMpin;
-    if (!currentUser?.hasMpin) {
-      toast({
-        variant: "destructive",
-        title: "MPIN Required",
-        description: "Please set your 6-digit MPIN first to view documents.",
-      });
-      setSetMpinOpen(true);
-      return;
-    }
-
+    // MPIN is always set by this point (page-level gate ensures it)
     setMpinActionDoc(doc);
     setMpinPromptOpen(true);
   };
@@ -543,17 +548,29 @@ export function DocumentsView({ isAdmin = false }) {
       </Dialog>
 
       {/* Set/Change MPIN Dialog */}
-      <Dialog open={setMpinOpen} onOpenChange={(open) => {
-        if (!open) { setSetMpinOpen(false); setNewMpin(""); }
-      }}>
-        <DialogContent className="max-w-md bg-white border-slate-200 shadow-2xl">
+      <Dialog
+        open={setMpinOpen}
+        onOpenChange={(open) => {
+          // In gate mode, prevent closing — user must set an MPIN
+          if (!open && isMpinGateMode) return;
+          if (!open) { setSetMpinOpen(false); setNewMpin(""); }
+        }}
+      >
+        <DialogContent
+          className="max-w-md bg-white border-slate-200 shadow-2xl"
+          // Prevent closing via Escape in gate mode
+          onEscapeKeyDown={(e) => { if (isMpinGateMode) e.preventDefault(); }}
+          onPointerDownOutside={(e) => { if (isMpinGateMode) e.preventDefault(); }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-slate-900">
               <KeyRound className="h-5 w-5 text-primary" />
-              {(user as UserWithMpin)?.hasMpin ? "Change MPIN" : "Create Security MPIN"}
+              {isMpinGateMode ? "Set Up Your Security MPIN" : (user as UserWithMpin)?.hasMpin ? "Change MPIN" : "Create Security MPIN"}
             </DialogTitle>
             <DialogDescription className="text-slate-500">
-              Choose a 6-digit number to protect your financial documents.
+              {isMpinGateMode
+                ? "Create a 6-digit MPIN to secure access to your documents. You'll enter this once per session to view files."
+                : "Choose a 6-digit number to protect your financial documents."}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-6">
@@ -573,11 +590,16 @@ export function DocumentsView({ isAdmin = false }) {
                 <InputOTPSlot index={5} className="w-12 h-14 text-xl rounded-md border-slate-200 bg-slate-50 text-slate-900" />
               </InputOTPGroup>
             </InputOTP>
+            {isMpinGateMode && (
+              <p className="text-xs text-slate-400 mt-4 text-center">This is a one-time setup. Remember your MPIN — it cannot be recovered.</p>
+            )}
           </div>
           <DialogFooter className="gap-3">
-            <Button variant="outline" className="flex-1 border-slate-200 text-slate-500" onClick={() => { setSetMpinOpen(false); setNewMpin(""); }}>
-              Cancel
-            </Button>
+            {!isMpinGateMode && (
+              <Button variant="outline" className="flex-1 border-slate-200 text-slate-500" onClick={() => { setSetMpinOpen(false); setNewMpin(""); }}>
+                Cancel
+              </Button>
+            )}
             <Button 
               className="flex-1 shadow-lg shadow-primary/20"
               onClick={() => setMpinMutation.mutate(newMpin)} 
@@ -586,7 +608,7 @@ export function DocumentsView({ isAdmin = false }) {
               {setMpinMutation.isPending ? (
                 <><Clock className="mr-2 h-4 w-4 animate-spin" />Saving...</>
               ) : (
-                <><CheckCircle2 className="mr-2 h-4 w-4" />Set MPIN</>
+                <><CheckCircle2 className="mr-2 h-4 w-4" />{isMpinGateMode ? "Activate MPIN" : "Set MPIN"}</>
               )}
             </Button>
           </DialogFooter>

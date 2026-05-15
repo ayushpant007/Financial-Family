@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import { PDFDocument } from "pdf-lib";
 import { db, clientsTable } from "@workspace/db";
 import { documentsTable } from "@workspace/db/schema";
 import { documentExtractedTextTable } from "@workspace/db/schema";
@@ -147,9 +148,18 @@ router.post("/upload", requireAuth, (req, res, next) => {
   const password: string | undefined = req.body.password || undefined;
 
   try {
-    // We still call extraction service ONLY to check for PDF passwords
+    // For PDFs, validate password (and decrypt if password-protected)
     if (fileExtension === 'pdf') {
       await ExtractionService.extractText(filePath, fileExtension, password);
+
+      // If a password was provided and extraction succeeded, strip the
+      // password from the PDF so it opens freely after MPIN verification
+      if (password) {
+        const encryptedBytes = fs.readFileSync(filePath);
+        const pdfDoc = await PDFDocument.load(encryptedBytes, { password });
+        const decryptedBytes = await pdfDoc.save();
+        fs.writeFileSync(filePath, decryptedBytes);
+      }
     }
 
     const [document] = await db.insert(documentsTable).values({
