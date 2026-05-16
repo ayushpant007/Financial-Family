@@ -11,16 +11,16 @@ globalThis.require = createRequire(import.meta.url);
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
 
 async function buildAll() {
-  const distDir = path.resolve(artifactDir, "../../api");
-  // We don't delete the whole api dir because it's at root now
-  
+  const distDir = path.resolve(artifactDir, "dist");
+  await rm(distDir, { recursive: true, force: true });
+
   await esbuild({
     entryPoints: [path.resolve(artifactDir, "app-source/index.ts")],
     platform: "node",
     bundle: true,
     format: "esm",
     outdir: distDir,
-    outExtension: { ".js": ".js" },
+    outExtension: { ".js": ".mjs" },
     logLevel: "info",
     // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
     // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
