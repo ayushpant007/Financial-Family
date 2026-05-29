@@ -1,6 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
-import { User, Users, Baby, Heart, Plus, Minus, Pencil, Trash2, Lock } from "lucide-react";
+import { User, Users, Baby, Heart, Plus, Minus, Pencil, Trash2, Lock, Unlock } from "lucide-react";
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Asset, Liability, FamilyMember } from "@workspace/api-client-react";
@@ -283,7 +283,9 @@ export function FamilyTree({
           <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 rounded-none border-r md:border-r-0 md:border-b border-slate-100 hover:bg-slate-50 text-slate-600" onClick={() => handleZoom("out")}><Minus size={18} /></Button>
           <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 rounded-none hover:bg-slate-50 text-slate-600" onClick={() => { setScale(window?.innerWidth < 768 ? 0.6 : 1); }}><Users size={18} /></Button>
         </div>
-        <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl shadow-xl border border-slate-200 hover:bg-slate-50"><Lock size={18} className="text-slate-300" /></Button>
+        <Button variant="ghost" size="icon" className="h-10 w-10 md:h-12 md:w-12 bg-white/80 backdrop-blur-md rounded-xl md:rounded-2xl shadow-xl border border-slate-200 hover:bg-slate-50">
+          {readOnly ? <Lock size={18} className="text-slate-400" /> : <Unlock size={18} className="text-amber-500 animate-pulse" />}
+        </Button>
       </div>
 
       <div className="hidden md:flex absolute bottom-12 right-12 z-50 bg-white/80 backdrop-blur-md p-6 rounded-3xl border border-slate-200 shadow-xl flex-col gap-4 min-w-[160px]">
@@ -308,7 +310,7 @@ export function FamilyTree({
         dragElastic={0.1}
         animate={{ scale }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="relative flex flex-col items-center justify-center min-h-full min-w-full cursor-grab active:cursor-grabbing p-10 md:p-32"
+        className="relative flex flex-col items-center justify-start min-h-full min-w-full cursor-grab active:cursor-grabbing pt-8 md:pt-16 px-4 pb-24"
       >
         <svg className="absolute inset-0 w-full h-full pointer-events-none z-0 overflow-visible">
           <defs>
@@ -350,7 +352,7 @@ export function FamilyTree({
         <div className="flex flex-col items-center gap-16 md:gap-24 relative z-10 py-10 md:py-20">
           <div className="flex gap-12 md:gap-20">
             {parents.map(p => (
-              <div key={p.id} ref={el => memberRefs.current[`member-${p.id}`] = el}>
+              <div key={p.id} ref={el => { memberRefs.current[`member-${p.id}`] = el; }}>
                 <MemberCard 
                   member={p} 
                   isSelected={selectedMemberId === p.id}
@@ -372,7 +374,7 @@ export function FamilyTree({
           </div>
 
           <div className="flex gap-16 md:gap-32 items-center">
-            <div ref={el => memberRefs.current["client"] = el}>
+            <div ref={el => { memberRefs.current["client"] = el; }}>
               <MemberCard 
                 member={client} 
                 isPrimary 
@@ -386,7 +388,7 @@ export function FamilyTree({
               />
             </div>
             {spouse ? (
-              <div ref={el => memberRefs.current[`member-${spouse.id}`] = el}>
+              <div ref={el => { memberRefs.current[`member-${spouse.id}`] = el; }}>
                 <MemberCard 
                   member={spouse} 
                   isSelected={selectedMemberId === spouse.id}
@@ -414,7 +416,7 @@ export function FamilyTree({
 
           <div className="flex gap-8 md:gap-16">
             {children.map(c => (
-              <div key={c.id} ref={el => memberRefs.current[`member-${c.id}`] = el}>
+              <div key={c.id} ref={el => { memberRefs.current[`member-${c.id}`] = el; }}>
                 <MemberCard 
                   member={c} 
                   isSelected={selectedMemberId === c.id}
@@ -428,7 +430,7 @@ export function FamilyTree({
               </div>
             ))}
             {!readOnly && (
-              <div ref={el => memberRefs.current["add-child"] = el}>
+              <div ref={el => { memberRefs.current["add-child"] = el; }}>
                 <Button 
                   variant="outline" 
                   className="w-56 h-48 border-dashed border-2 flex flex-col gap-4 rounded-[2.5rem] bg-slate-50 hover:bg-slate-100 hover:border-primary/50 transition-all group shadow-sm border-slate-200"

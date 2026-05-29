@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { cn } from "@/lib/utils";
 import {
   useGetClient, useGetClientSummary, useListClientAssets, useListClientLiabilities,
   useCreateClientAsset, useUpdateClientAsset, useDeleteClientAsset,
@@ -17,19 +18,114 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils-format";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, IndianRupee, ArrowLeft } from "lucide-react";
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, IndianRupee, ArrowLeft, Sparkles, Compass, BarChart3, Landmark, RefreshCw, Shield, Coins, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FundAutocomplete } from "@/components/fund-autocomplete";
 import { StockAutocomplete } from "@/components/stock-autocomplete";
-import { MutualFundNav } from "@/components/mutual-fund-nav";
-import { StockPriceDisplay } from "@/components/stock-price-display";
+import { MutualFundNav, MFProjectionInline } from "@/components/mutual-fund-nav";
+import { StockPriceDisplay, StockProjectionInline } from "@/components/stock-price-display";
 import { FDValuation, RDValuation, PFValuation, calculatePFCurrentValue, calculateEMI, LoanValuation, calculateIncomeTax, SIPValuation, SWPValuation, STPValuation, calculateMFCurrentValue } from "@/components/fixed-income-valuation";
 import { ScrollingFeatureShowcase } from "@/components/ui/interactive-scrolling-story-component";
 import { usePageBackground } from "@/hooks/usePageBackground";
+import { AnimatedTabBar } from "@/components/ui/animated-tab-bar";
+import CircularNavigation from "@/components/ui/cicular-navigation-bar";
+import { useMFNav } from "@/hooks/use-mf-nav";
+import { useStockPrice } from "@/hooks/use-stock-price";
+import { getFundCode } from "@/lib/mutual-funds";
+import { getStockSymbol } from "@/lib/stocks";
+
+function yearsElapsed(startDateStr: string, endDateStr?: string): number {
+  const start = new Date(startDateStr);
+  const cap = endDateStr ? new Date(endDateStr) : null;
+  const effective = cap && new Date() > cap ? cap : new Date();
+  const ms = effective.getTime() - start.getTime();
+  return Math.max(0, ms / (1000 * 60 * 60 * 24 * 365.25));
+}
+
+function monthsElapsed(startDateStr: string, maxMonths?: number): number {
+  const start = new Date(startDateStr);
+  const now = new Date();
+  const months =
+    (now.getFullYear() - start.getFullYear()) * 12 +
+    (now.getMonth() - start.getMonth());
+  const capped = maxMonths !== undefined ? Math.min(months, maxMonths) : months;
+  return Math.max(0, capped);
+}
+
+const getAssetCurrentAndInvested = (asset: any) => {
+  const data = asset.data as any;
+  let invested = 0;
+  let current = 0;
+
+  if (asset.assetType === "mutual_fund") {
+    const method = data.investmentMethod;
+    if (!method || method === "Lump sum") {
+      invested = parseFloat(data.amount || "0");
+      current = asset.value || invested;
+    } else if (method === "SIP") {
+      const P = parseFloat(data.monthlyInvestment || "0") || 0;
+      const start = data.startDate;
+      const tenureYears = parseFloat(data.tenureYears || "1") || 1;
+      const n_passed = start ? monthsElapsed(start, tenureYears * 12) : 0;
+      invested = P * n_passed;
+      current = calculateMFCurrentValue(data) || asset.value || invested;
+    } else if (method === "SWP") {
+      invested = parseFloat(data.investmentAmount || "0") || 0;
+      current = calculateMFCurrentValue(data) || asset.value || invested;
+    } else if (method === "STP") {
+      invested = parseFloat(data.investmentAmount || "0") || 0;
+      current = calculateMFCurrentValue(data) || asset.value || invested;
+    }
+  } else if (asset.assetType === "stock") {
+    invested = parseFloat(data.amount || "0");
+    current = asset.value || invested;
+  } else if (asset.assetType === "fixed_deposit") {
+    invested = parseFloat(data.investmentAmount || "0");
+    const P = invested;
+    const R = (parseFloat(data.interestRate || "0")) / 100;
+    const T = yearsElapsed(data.startDate || "", data.maturityDate || undefined);
+    const payoutType = data.payoutType ?? "Cumulative";
+    let n_freq = 1;
+    if (payoutType === "Monthly") n_freq = 12;
+    else if (payoutType === "Quarterly") n_freq = 4;
+    current = P * Math.pow(1 + R / n_freq, n_freq * T);
+  } else if (asset.assetType === "recurring_deposit") {
+    const monthly = parseFloat(data.monthlyInvestment || "0");
+    let tenureMonths = 0;
+    if (data.startDate && data.maturityDate) {
+      const d1 = new Date(data.startDate);
+      const d2 = new Date(data.maturityDate);
+      tenureMonths = (d2.getFullYear() - d1.getFullYear()) * 12 + (d2.getMonth() - d1.getMonth());
+    } else {
+      tenureMonths = parseFloat(data.tenure || "0");
+    }
+    const n_months_passed = data.startDate ? monthsElapsed(data.startDate, tenureMonths || undefined) : tenureMonths;
+    const n_installments = Math.min(n_months_passed + 1, tenureMonths);
+    invested = monthly * n_installments;
+    
+    const i_q = (parseFloat(data.interestRate || "0")) / 400;
+    const i_eff = Math.pow(1 + i_q, 1/3) - 1;
+    const accruedOnPassed = n_months_passed > 0 ? monthly * (Math.pow(1 + i_eff, n_months_passed) - 1) / i_eff * (1 + i_eff) : 0;
+    const currentInstallment = (n_installments > n_months_passed) ? monthly : 0;
+    current = accruedOnPassed + currentInstallment;
+  } else if (asset.assetType === "provident_fund") {
+    const pf = calculatePFCurrentValue(data);
+    invested = pf.totalInvested;
+    current = pf.currentValue;
+  } else if (asset.assetType === "cash_bank") {
+    invested = parseFloat(data.amount || "0");
+    current = asset.value || invested;
+  } else {
+    invested = asset.value || 0;
+    current = asset.value || 0;
+  }
+
+  return { invested, current };
+};
 
 const CLIENT_DETAIL_SLIDES = [
   {
@@ -65,6 +161,15 @@ const ASSET_LABELS: Record<string, string> = {
   recurring_deposit: "Recurring Deposit",
   provident_fund: "Provident Fund",
   cash_bank: "Cash & Bank",
+};
+
+const ASSET_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  mutual_fund: TrendingUp,
+  stock: BarChart3,
+  fixed_deposit: Landmark,
+  recurring_deposit: RefreshCw,
+  provident_fund: Shield,
+  cash_bank: Coins,
 };
 
 const LOAN_LABELS: Record<string, string> = {
@@ -167,6 +272,200 @@ type LiabilityDialogData = {
   medicalBills: string; medicines: string; miscCosts: string;
 };
 
+interface AssetDistributionCardProps {
+  item: any;
+  totals: { current: number; invested: number };
+  onResolved: (assetId: number, current: number, invested: number) => void;
+  activeGroup: any;
+}
+
+function AssetDistributionCard({
+  item,
+  totals,
+  onResolved,
+  activeGroup
+}: AssetDistributionCardProps) {
+  const assetName = (item.data as any).assetName || (item.data as any).institutionName || activeGroup.meta.label;
+  const investmentMethod = (item.data as any).investmentMethod;
+  const units = parseFloat((item.data as any).units ?? "0");
+  
+  // Calculate static values first
+  const staticVals = getAssetCurrentAndInvested(item);
+  const [resolvedVals, setResolvedVals] = useState(staticVals);
+
+  // If mutual fund & lump sum
+  const isMFLumpSum = item.assetType === "mutual_fund" && (!investmentMethod || investmentMethod === "Lump sum");
+  const mfSchemeCode = isMFLumpSum && assetName ? getFundCode(assetName) : null;
+  const { data: mfData } = useMFNav(mfSchemeCode ?? "");
+
+  // If stock
+  const isStock = item.assetType === "stock";
+  const stockSymbol = isStock && assetName ? getStockSymbol(assetName) : null;
+  const { data: stockData } = useStockPrice(stockSymbol ?? "");
+
+  // Effect to update local and parent values for Mutual Fund
+  useEffect(() => {
+    if (isMFLumpSum && mfData?.nav !== undefined) {
+      const current = units * mfData.nav;
+      setResolvedVals({ invested: staticVals.invested, current });
+      onResolved(item.id, current, staticVals.invested);
+    }
+  }, [mfData?.nav, isMFLumpSum, units, staticVals.invested, item.id, onResolved]);
+
+  // Effect to update local and parent values for Stock
+  useEffect(() => {
+    if (isStock && stockData?.price !== undefined) {
+      const current = units * stockData.price;
+      setResolvedVals({ invested: staticVals.invested, current });
+      onResolved(item.id, current, staticVals.invested);
+    }
+  }, [stockData?.price, isStock, units, staticVals.invested, item.id, onResolved]);
+
+  // For other asset types (or while loading), use static/fallback values
+  const vals = resolvedVals;
+  const weight = totals.current > 0 ? (vals.current / totals.current) * 100 : 0;
+  const gain = vals.current - vals.invested;
+  const gainPct = vals.invested > 0 ? (gain / vals.invested) * 100 : 0;
+  const isPositive = gain >= 0;
+
+  // Build projection trigger node
+  let projectionNode: React.ReactNode = null;
+  if (item.assetType === "mutual_fund" && assetName) {
+    projectionNode = (
+      <MFProjectionInline
+        fundName={assetName}
+        units={parseFloat((item.data as any).units ?? "0")}
+        investmentAmount={vals.invested}
+        investmentMethod={investmentMethod}
+        assetData={item.data}
+      />
+    );
+  } else if (item.assetType === "fixed_deposit") {
+    projectionNode = (
+      <Dialog>
+        <DialogTrigger asChild>
+          <button className="flex items-center gap-2 w-full justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all shadow-sm group">
+            <BarChart3 className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
+            View Full Projection
+            <span className="ml-auto text-slate-300 group-hover:text-slate-500">→</span>
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader><DialogTitle className="text-slate-900">FD Growth Projection</DialogTitle></DialogHeader>
+          <div className="py-2"><FDValuation data={item.data as Record<string, unknown>} /></div>
+        </DialogContent>
+      </Dialog>
+    );
+  } else if (item.assetType === "recurring_deposit") {
+    projectionNode = (
+      <Dialog>
+        <DialogTrigger asChild>
+          <button className="flex items-center gap-2 w-full justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all shadow-sm group">
+            <BarChart3 className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
+            View Full Projection
+            <span className="ml-auto text-slate-300 group-hover:text-slate-500">→</span>
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader><DialogTitle className="text-slate-900">RD Growth Projection</DialogTitle></DialogHeader>
+          <div className="py-2"><RDValuation data={item.data as Record<string, unknown>} /></div>
+        </DialogContent>
+      </Dialog>
+    );
+  } else if (item.assetType === "provident_fund") {
+    projectionNode = (
+      <Dialog>
+        <DialogTrigger asChild>
+          <button className="flex items-center gap-2 w-full justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 py-2 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-all shadow-sm group">
+            <BarChart3 className="h-3.5 w-3.5 text-slate-400 group-hover:text-slate-700 transition-colors" />
+            View Full Projection
+            <span className="ml-auto text-slate-300 group-hover:text-slate-500">→</span>
+          </button>
+        </DialogTrigger>
+        <DialogContent className="max-w-md bg-white">
+          <DialogHeader><DialogTitle className="text-slate-900">PF Growth Projection</DialogTitle></DialogHeader>
+          <div className="py-2"><PFValuation data={item.data as Record<string, unknown>} /></div>
+        </DialogContent>
+      </Dialog>
+    );
+  } else if (item.assetType === "stock" && assetName) {
+    projectionNode = (
+      <StockProjectionInline
+        stockName={assetName}
+        units={parseFloat((item.data as any).units ?? "0")}
+        investmentAmount={vals.invested}
+      />
+    );
+  }
+
+  return (
+    <div key={item.id} className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden animate-fadeIn">
+      {/* Card Header — Fund name + type badge */}
+      <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3 border-b border-slate-100">
+        <div className="min-w-0">
+          <p className="font-bold text-slate-800 text-sm leading-snug truncate" title={assetName}>{assetName}</p>
+          {investmentMethod && (
+            <span className="inline-block mt-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">
+              {investmentMethod}
+            </span>
+          )}
+        </div>
+        {/* Return badge */}
+        <div className={`flex-shrink-0 text-right rounded-xl px-3 py-1.5 ${isPositive ? 'bg-emerald-50 border border-emerald-100' : 'bg-rose-50 border border-rose-100'}`}>
+          <p className="text-[9px] uppercase tracking-widest font-bold text-slate-400">Total Return</p>
+          <p className={`text-sm font-black tabular-nums ${isPositive ? 'text-emerald-700' : 'text-rose-700'}`}>
+            {isPositive ? '+' : ''}{gainPct.toFixed(2)}%
+          </p>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      <div className="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
+        <div className="px-4 py-3">
+          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-1">Amount Invested</p>
+          <p className="text-sm font-black text-slate-800 tabular-nums">{formatCurrency(vals.invested)}</p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-1">Current Market Value</p>
+          <p className="text-sm font-black text-slate-800 tabular-nums flex items-center gap-1.5">
+            {vals.current === staticVals.current && (isMFLumpSum || isStock) ? (
+              <span className="inline-flex items-center gap-1.5 text-slate-400">
+                <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                {formatCurrency(vals.current)}
+              </span>
+            ) : formatCurrency(vals.current)}
+          </p>
+        </div>
+        <div className="px-4 py-3">
+          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mb-1">Portfolio Share</p>
+          <p className="text-sm font-black text-slate-800 tabular-nums">{weight.toFixed(1)}%</p>
+        </div>
+      </div>
+
+      {/* Weight bar */}
+      <div className="px-4 pt-3 pb-1">
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-[10px] text-slate-400 font-semibold">Portfolio Allocation</p>
+          <p className="text-[10px] text-slate-500 font-bold">{weight.toFixed(1)}% of total</p>
+        </div>
+        <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden shadow-inner">
+          <div
+            className={`bg-gradient-to-r ${activeGroup.meta.gradient} h-full rounded-full transition-all duration-700`}
+            style={{ width: `${weight}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Projection button — full-width, clearly separated */}
+      {projectionNode && (
+        <div className="px-4 pb-4 pt-3">
+          {projectionNode}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ClientDetailPage() {
   const params = useParams<{ clientId: string }>();
   const clientId = parseInt(params.clientId);
@@ -198,6 +497,23 @@ export default function ClientDetailPage() {
 
   const [assetDialog, setAssetDialog] = useState<AssetDialogData | null>(null);
   const [liabilityDialog, setLiabilityDialog] = useState<LiabilityDialogData | null>(null);
+  const [activeAssetTab, setActiveAssetTab] = useState(0);
+  const [isCircularNavOpen, setIsCircularNavOpen] = useState(false);
+  const [viewHoldingsForType, setViewHoldingsForType] = useState<string | null>(null);
+  const [assetCurrentPage, setAssetCurrentPage] = useState(1);
+  const [liveValues, setLiveValues] = useState<Record<number, { current: number; invested: number }>>({});
+
+  const handleLiveValueResolved = useCallback((assetId: number, current: number, invested: number) => {
+    setLiveValues(prev => {
+      if (prev[assetId]?.current === current && prev[assetId]?.invested === invested) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [assetId]: { current, invested }
+      };
+    });
+  }, []);
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: getGetClientSummaryQueryKey(clientId) });
@@ -454,6 +770,474 @@ export default function ClientDetailPage() {
     );
   }
 
+  const filteredAssets = assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
+
+  const GROUP_META: Record<string, { label: string; plural: string; gradient: string; badgeCls: string; color: string; icon: string }> = {
+    mutual_fund:       { label: "Mutual Fund",        plural: "Mutual Funds",       gradient: "from-amber-400 to-yellow-300",  badgeCls: "bg-amber-50 text-amber-700 border-amber-200",    color: "#f59e0b", icon: "📈" },
+    stock:             { label: "Stock",              plural: "Stocks",             gradient: "from-emerald-500 to-teal-400",  badgeCls: "bg-emerald-50 text-emerald-700 border-emerald-200", color: "#10b981", icon: "📊" },
+    fixed_deposit:     { label: "Fixed Deposit",     plural: "Fixed Deposits",     gradient: "from-blue-500 to-indigo-400",   badgeCls: "bg-blue-50 text-blue-700 border-blue-200",       color: "#3b82f6", icon: "🏦" },
+    recurring_deposit: { label: "Recurring Deposit", plural: "Recurring Deposits", gradient: "from-violet-500 to-purple-400", badgeCls: "bg-violet-50 text-violet-700 border-violet-200", color: "#8b5cf6", icon: "🔄" },
+    provident_fund:    { label: "PF / PPF",          plural: "Provident Fund",     gradient: "from-orange-500 to-rose-400",   badgeCls: "bg-orange-50 text-orange-700 border-orange-200", color: "#f97316", icon: "🛡️" },
+    cash_bank:         { label: "Cash & Bank",       plural: "Cash & Bank",        gradient: "from-slate-500 to-slate-400",   badgeCls: "bg-slate-100 text-slate-600 border-slate-200",   color: "#64748b", icon: "💵" },
+  };
+
+  const groups = ASSET_TYPES
+    .map(t => ({
+      typeKey: t.value,
+      meta: GROUP_META[t.value] ?? { label: t.label, plural: t.label, gradient: "from-slate-400 to-slate-300", badgeCls: "bg-slate-100 text-slate-600 border-slate-200", color: "#94a3b8", icon: "💼" },
+      items: filteredAssets.filter(a => a.assetType === t.value),
+    }))
+    .filter(g => g.items.length > 0);
+
+  if (viewHoldingsForType !== null) {
+    const activeGroup = groups.find(g => g.typeKey === viewHoldingsForType);
+    if (!activeGroup) {
+      setViewHoldingsForType(null);
+      return null;
+    }
+
+    const sortedHoldings = [...activeGroup.items].sort((a, b) => b.id - a.id);
+    const itemsPerPage = 10;
+    const totalPages = Math.max(1, Math.ceil(sortedHoldings.length / itemsPerPage));
+    const activePage = Math.min(assetCurrentPage, totalPages);
+    const startIndex = (activePage - 1) * itemsPerPage;
+    const paginatedHoldings = sortedHoldings.slice(startIndex, startIndex + itemsPerPage);
+
+    const skipKeys = ["amount","basicSalary","dearnessAllowance","employeeContributionPercent","employerContributionPercent","interestRate","tenureYears","currentBalance","salaryGrowth","includeEPS","totalContribution","startDate","maturityDate","monthlyInvestment","investmentAmount","institutionName","payoutType","assetName","investmentMethod"];
+    
+    const labelMap: Record<string, string> = {
+      date: "Purchase Date", price: "Buy Price", units: "Units",
+      accountType: "Account", age: "Age",
+    };
+
+    const formatValue = (k: string, v: unknown) => {
+      const str = String(v);
+      if (k === "price" || k === "amount") return formatCurrency(parseFloat(str) || 0);
+      return str;
+    };
+
+    return (
+      <Layout>
+        <div className="space-y-6 pb-20 md:pb-0" data-reveal>
+          {/* Header row with navigation & back button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-10 w-10 rounded-full bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-900 cursor-pointer flex items-center justify-center transition-all"
+                onClick={() => setViewHoldingsForType(null)}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-widest text-slate-400 font-extrabold">Client Profile</span>
+                  <span className="text-[10px] text-slate-300">•</span>
+                  <span className="text-[10px] uppercase tracking-widest text-amber-500 font-extrabold">{client?.name}</span>
+                </div>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
+                  <span>Detailed {activeGroup.meta.plural}</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${activeGroup.meta.badgeCls}`}>
+                    {sortedHoldings.length} holding{sortedHoldings.length !== 1 ? "s" : ""}
+                  </span>
+                </h1>
+              </div>
+            </div>
+
+            <Button 
+              onClick={() => setViewHoldingsForType(null)}
+              className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-all cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Back to Client Profile
+            </Button>
+          </div>
+
+          {/* Asset Summary Banner */}
+          <div className={`p-6 rounded-3xl border border-slate-100 bg-gradient-to-br from-slate-900/95 to-slate-900 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6`}>
+            <div className="flex items-center gap-4.5">
+              <div className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${activeGroup.meta.gradient} flex items-center justify-center text-2xl shadow-lg shadow-amber-500/10 flex-shrink-0`}>
+                {activeGroup.meta.icon}
+              </div>
+              <div>
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-extrabold">Total Asset Value</p>
+                <h2 className="text-3xl font-black tracking-tight mt-1.5 tabular-nums">
+                  {formatCurrency(activeGroup.items.reduce((s, a) => s + (a.value ?? 0), 0))}
+                </h2>
+              </div>
+            </div>
+
+            {(!isAdmin || selectedMemberId === null) && (
+              <Button 
+                onClick={() => { setAssetDialog({ type: activeGroup.typeKey, data: {} }); }}
+                className={`bg-gradient-to-r ${activeGroup.meta.gradient} hover:opacity-90 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl flex items-center gap-2 shadow-lg shadow-amber-500/10 cursor-pointer`}
+              >
+                <Plus className="h-4 w-4" /> Add New Holding
+              </Button>
+            )}
+          </div>
+
+          {/* Stretched holdings list stacked vertically (Row-by-Row) */}
+          <div className="flex flex-col gap-5">
+            {paginatedHoldings.length === 0 ? (
+              <Card className="border-slate-200 border-dashed bg-slate-50/50 rounded-2xl">
+                <CardContent className="py-16 text-center text-slate-400 text-sm">
+                  No holdings found in this asset class.
+                </CardContent>
+              </Card>
+            ) : (
+              paginatedHoldings.map((asset) => (
+                <Card key={asset.id} className="overflow-hidden border border-slate-200 bg-white shadow-sm hover:shadow-md transition-all duration-200 rounded-3xl group">
+                  <div className={`h-1.5 w-full bg-gradient-to-r ${activeGroup.meta.gradient}`} />
+                  <CardContent className="p-6">
+                    {/* Card Header */}
+                    <div className="flex items-start justify-between gap-4 mb-5">
+                      <div className="flex-1 min-w-0">
+                        {(asset.data as any).assetName && (
+                          <h4 className="text-base font-black text-slate-900 leading-snug mb-1.5 pr-2">
+                            {(asset.data as any).assetName}
+                          </h4>
+                        )}
+                        {(asset.data as any).investmentMethod && (
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${activeGroup.meta.badgeCls} mb-3`}>
+                            {(asset.data as any).investmentMethod}
+                          </span>
+                        )}
+                        <div className="flex items-baseline gap-2 mt-1">
+                          <span className="text-[10px] text-slate-400 uppercase tracking-widest font-extrabold">Current Value:</span>
+                          <span className="text-2xl font-black text-slate-955 tabular-nums">
+                            {asset.assetType === "provident_fund"
+                              ? formatCurrency(calculatePFCurrentValue(asset.data as Record<string, any>).currentValue)
+                              : (asset.data as any).investmentMethod && (asset.data as any).investmentMethod !== "Lump sum"
+                              ? formatCurrency(calculateMFCurrentValue(asset.data))
+                              : formatCurrency(asset.value)}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2 items-center flex-shrink-0 opacity-40 group-hover:opacity-100 transition-opacity">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl cursor-pointer" 
+                          onClick={() => {
+                            const data: Record<string, string> = {};
+                            Object.entries(asset.data as Record<string, unknown>).forEach(([k, v]) => { data[k] = String(v); });
+                            setAssetDialog({ type: asset.assetType, data, editId: asset.id });
+                          }}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl cursor-pointer" 
+                          onClick={() => handleDeleteAsset(asset.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Metric Chips Grid */}
+                    {(() => {
+                      const entries = Object.entries(asset.data as Record<string, unknown>).filter(([k]) => !skipKeys.includes(k));
+                      if (entries.length === 0) return null;
+                      return (
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+                          {entries.map(([k, v]) => (
+                            <div key={k} className="bg-slate-50 border border-slate-100 rounded-2xl p-3 hover:bg-slate-100/70 transition-all shadow-sm shadow-slate-100/5">
+                              <p className="text-[8px] font-black uppercase tracking-[0.18em] text-slate-400 mb-1">
+                                {labelMap[k] ?? k.replace(/([A-Z])/g, " $1").trim()}
+                              </p>
+                              <p className="text-sm font-bold text-slate-800 truncate" title={String(v)}>
+                                {formatValue(k, v)}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Live Valuation details if supported */}
+                    {(asset.assetType === "mutual_fund" || asset.assetType === "stock" || asset.assetType === "fixed_deposit" || asset.assetType === "recurring_deposit" || asset.assetType === "provident_fund") && (
+                      <div className="border-t border-dashed border-slate-200 pt-4 mt-2">
+                        <p className="text-[8px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2 flex items-center gap-1.5">
+                          <span className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                          Live Valuation Feed
+                        </p>
+                        {asset.assetType === "mutual_fund" && (asset.data as any).assetName && (
+                          <>
+                            {!(asset.data as any).investmentMethod || (asset.data as any).investmentMethod === "Lump sum" ? (
+                              <MutualFundNav fundName={(asset.data as any).assetName} units={parseFloat((asset.data as any).units ?? "0")} investmentAmount={parseFloat((asset.data as any).amount ?? "0")} />
+                            ) : (asset.data as any).investmentMethod === "SIP" ? (
+                              <SIPValuation data={asset.data} />
+                            ) : (asset.data as any).investmentMethod === "SWP" ? (
+                              <SWPValuation data={asset.data} />
+                            ) : (asset.data as any).investmentMethod === "STP" ? (
+                              <STPValuation data={asset.data} />
+                            ) : null}
+                          </>
+                        )}
+                        {asset.assetType === "stock" && (asset.data as any).assetName && (
+                          <StockPriceDisplay stockName={(asset.data as any).assetName} units={parseFloat((asset.data as any).units ?? "0")} investmentAmount={parseFloat((asset.data as any).amount ?? "0")} />
+                        )}
+                        {asset.assetType === "fixed_deposit" && <FDValuation data={asset.data as Record<string, unknown>} />}
+                        {asset.assetType === "recurring_deposit" && <RDValuation data={asset.data as Record<string, unknown>} />}
+                        {asset.assetType === "provident_fund" && <PFValuation data={asset.data as Record<string, unknown>} />}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
+
+          {/* Always Visible Pagination Footer */}
+          {sortedHoldings.length > 0 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-200/80 pt-6 mt-8">
+              <p className="text-xs font-semibold text-slate-500">
+                Showing <span className="font-extrabold text-slate-900">{startIndex + 1}</span> to{" "}
+                <span className="font-extrabold text-slate-950">{Math.min(startIndex + itemsPerPage, sortedHoldings.length)}</span> of{" "}
+                <span className="font-extrabold text-slate-950">{sortedHoldings.length}</span> holdings
+              </p>
+              
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  disabled={activePage === 1}
+                  onClick={() => setAssetCurrentPage(prev => Math.max(prev - 1, 1))}
+                  className="border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 disabled:opacity-50 h-9 px-3.5 rounded-xl text-[10px] font-bold tracking-wider uppercase cursor-pointer transition-all"
+                >
+                  Previous
+                </Button>
+                
+                {Array.from({ length: totalPages }).map((_, idx) => {
+                  const pNum = idx + 1;
+                  const isCurrent = activePage === pNum;
+                  return (
+                    <Button
+                      key={pNum}
+                      onClick={() => setAssetCurrentPage(pNum)}
+                      className={`h-9 w-9 text-xs font-extrabold rounded-xl flex items-center justify-center cursor-pointer transition-all ${
+                        isCurrent
+                          ? `bg-gradient-to-r ${activeGroup.meta.gradient} text-slate-950 shadow-md`
+                          : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      {pNum}
+                    </Button>
+                  );
+                })}
+                
+                <Button
+                  variant="outline"
+                  disabled={activePage === totalPages}
+                  onClick={() => setAssetCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                  className="border border-slate-200/80 bg-white hover:bg-slate-50 text-slate-600 hover:text-slate-900 disabled:opacity-50 h-9 px-3.5 rounded-xl text-[10px] font-bold tracking-wider uppercase cursor-pointer transition-all"
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Ported Asset Edit Dialog inside Intercept */}
+        <Dialog open={!!assetDialog} onOpenChange={(open) => !open && setAssetDialog(null)}>
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto pr-4">
+            <DialogHeader>
+              <DialogTitle>{assetDialog?.editId ? "Edit Asset" : "Add Asset"}</DialogTitle>
+            </DialogHeader>
+            {assetDialog && (
+              <div className="grid grid-cols-2 gap-3">
+                <div className="col-span-2">
+                  <Label className="text-xs">Asset Type</Label>
+                  <Select value={assetDialog.type} onValueChange={(v: any) => setAssetDialog({ ...assetDialog, type: v, data: {} })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>{ASSET_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}</SelectContent>
+                  </Select>
+                </div>
+
+                {assetDialog.type === "mutual_fund" && (
+                  <div className="col-span-2 grid grid-cols-2 gap-3">
+                    <div className="col-span-2"><Label className="text-xs">Asset Name</Label><FundAutocomplete value={assetDialog.data.assetName ?? ""} onChange={(v) => updateAssetField("assetName", v)} /></div>
+                    <div className="col-span-2">
+                      <Label className="text-xs">Investment Method</Label>
+                      <Select value={assetDialog.data.investmentMethod ?? "Lump sum"} onValueChange={(v) => updateAssetField("investmentMethod", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Lump sum">Lump sum / One-time</SelectItem>
+                          <SelectItem value="SIP">SIP (Monthly)</SelectItem>
+                          <SelectItem value="SWP">SWP (Withdrawal)</SelectItem>
+                          <SelectItem value="STP">STP (Transfer)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {(!assetDialog.data.investmentMethod || assetDialog.data.investmentMethod === "Lump sum") ? (
+                      <>
+                        <div>
+                          <Label className="text-xs">Transaction Type</Label>
+                          <Select value={assetDialog.data.transactionType ?? "Buy"} onValueChange={(v) => updateAssetField("transactionType", v)}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent><SelectItem value="Buy">Buy</SelectItem><SelectItem value="Sell">Sell</SelectItem></SelectContent>
+                          </Select>
+                        </div>
+                        <div><Label className="text-xs">Date</Label><Input type="date" value={assetDialog.data.date ?? ""} onChange={(e) => updateAssetField("date", e.target.value)} /></div>
+                        <div><Label className="text-xs">Units</Label><Input type="number" placeholder="0" value={assetDialog.data.units ?? ""} onChange={(e) => updateAssetField("units", e.target.value)} /></div>
+                        <div><Label className="text-xs">Price</Label><Input type="number" placeholder="0.00" value={assetDialog.data.price ?? ""} onChange={(e) => updateAssetField("price", e.target.value)} /></div>
+                        <div className="col-span-2">
+                          <Label className="text-xs">Amount (auto)</Label>
+                          <Input readOnly value={assetDialog.data.amount ?? "0"} className="bg-muted" />
+                        </div>
+                      </>
+                    ) : assetDialog.data.investmentMethod === "SIP" ? (
+                      <>
+                        <div><Label className="text-xs">Monthly SIP Amount</Label><Input type="number" placeholder="0" value={assetDialog.data.monthlyInvestment ?? ""} onChange={(e) => updateAssetField("monthlyInvestment", e.target.value)} /></div>
+                        <div><Label className="text-xs">SIP Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div>
+                        <div><Label className="text-xs">Tenure (Years)</Label><Input type="number" placeholder="0" value={assetDialog.data.tenureYears ?? ""} onChange={(e) => updateAssetField("tenureYears", e.target.value)} /></div>
+                        <div><Label className="text-xs">Expected Return Rate (%)</Label><Input type="number" placeholder="0" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
+                      </>
+                    ) : assetDialog.data.investmentMethod === "SWP" ? (
+                      <>
+                        <div className="col-span-2"><Label className="text-xs">Initial Investment Amount</Label><Input type="number" placeholder="0" value={assetDialog.data.investmentAmount ?? ""} onChange={(e) => updateAssetField("investmentAmount", e.target.value)} /></div>
+                        <div><Label className="text-xs">Monthly Withdrawal (SWP)</Label><Input type="number" placeholder="0" value={assetDialog.data.monthlyInvestment ?? ""} onChange={(e) => updateAssetField("monthlyInvestment", e.target.value)} /></div>
+                        <div><Label className="text-xs">SWP Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div>
+                        <div><Label className="text-xs">Tenure (Years)</Label><Input type="number" placeholder="0" value={assetDialog.data.tenureYears ?? ""} onChange={(e) => updateAssetField("tenureYears", e.target.value)} /></div>
+                        <div><Label className="text-xs">Expected Return Rate (%)</Label><Input type="number" placeholder="0" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
+                      </>
+                    ) : assetDialog.data.investmentMethod === "STP" ? (
+                      <>
+                        <div className="col-span-2"><Label className="text-xs">Transfer to Fund Name</Label><FundAutocomplete value={assetDialog.data.institutionName ?? ""} onChange={(v) => updateAssetField("institutionName", v)} /></div>
+                        <div className="col-span-2"><Label className="text-xs">Initial Investment in Source Fund</Label><Input type="number" placeholder="0" value={assetDialog.data.investmentAmount ?? ""} onChange={(e) => updateAssetField("investmentAmount", e.target.value)} /></div>
+                        <div><Label className="text-xs">Monthly Transfer Amount (STP)</Label><Input type="number" placeholder="0" value={assetDialog.data.monthlyInvestment ?? ""} onChange={(e) => updateAssetField("monthlyInvestment", e.target.value)} /></div>
+                        <div><Label className="text-xs">STP Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div>
+                        <div><Label className="text-xs">Tenure (Years)</Label><Input type="number" placeholder="0" value={assetDialog.data.tenureYears ?? ""} onChange={(e) => updateAssetField("tenureYears", e.target.value)} /></div>
+                        <div><Label className="text-xs">Expected Return Rate (%)</Label><Input type="number" placeholder="0" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+
+                {assetDialog.type === "stock" && (
+                  <div className="col-span-2 grid grid-cols-2 gap-3">
+                    <div className="col-span-2"><Label className="text-xs">Stock Name</Label><StockAutocomplete value={assetDialog.data.assetName ?? ""} onChange={(v) => updateAssetField("assetName", v)} /></div>
+                    <div><Label className="text-xs">Date</Label><Input type="date" value={assetDialog.data.date ?? ""} onChange={(e) => updateAssetField("date", e.target.value)} /></div>
+                    <div><Label className="text-xs">Units</Label><Input type="number" placeholder="0" value={assetDialog.data.units ?? ""} onChange={(e) => updateAssetField("units", e.target.value)} /></div>
+                    <div><Label className="text-xs">Price</Label><Input type="number" placeholder="0.00" value={assetDialog.data.price ?? ""} onChange={(e) => updateAssetField("price", e.target.value)} /></div>
+                    <div className="col-span-2">
+                      <Label className="text-xs">Amount (auto)</Label>
+                      <Input readOnly value={assetDialog.data.amount ?? "0"} className="bg-muted" />
+                    </div>
+                  </div>
+                )}
+
+                {assetDialog.type === "fixed_deposit" && (
+                  <div className="col-span-2 grid grid-cols-2 gap-3">
+                    <div className="col-span-2"><Label className="text-xs">Bank / Institution Name</Label><Input placeholder="SBI, HDFC..." value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} /></div>
+                    <div><Label className="text-xs">Investment Amount</Label><Input type="number" placeholder="0" value={assetDialog.data.investmentAmount ?? ""} onChange={(e) => updateAssetField("investmentAmount", e.target.value)} /></div>
+                    <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" placeholder="0.00" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
+                    <div><Label className="text-xs">Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div>
+                    <div><Label className="text-xs">Maturity Date</Label><Input type="date" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} /></div>
+                    <div className="col-span-2">
+                      <Label className="text-xs">Payout Type</Label>
+                      <Select value={assetDialog.data.payoutType ?? "Cumulative"} onValueChange={(v) => updateAssetField("payoutType", v)}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Cumulative">Cumulative (On Maturity)</SelectItem>
+                          <SelectItem value="Monthly">Monthly Payout</SelectItem>
+                          <SelectItem value="Quarterly">Quarterly Payout</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                )}
+
+                {assetDialog.type === "recurring_deposit" && (
+                  <div className="col-span-2 grid grid-cols-2 gap-3">
+                    <div className="col-span-2"><Label className="text-xs">Bank / Institution Name</Label><Input placeholder="SBI, HDFC..." value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} /></div>
+                    <div><Label className="text-xs">Monthly Deposit</Label><Input type="number" placeholder="0" value={assetDialog.data.monthlyInvestment ?? ""} onChange={(e) => updateAssetField("monthlyInvestment", e.target.value)} /></div>
+                    <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" placeholder="0.00" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
+                    <div><Label className="text-xs">Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div>
+                    <div><Label className="text-xs">Maturity Date</Label><Input type="date" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} /></div>
+                  </div>
+                )}
+
+                {assetDialog.type === "provident_fund" && (
+                  <div className="col-span-2 grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <Label className="text-xs">PF Account Type</Label>
+                      <Select value={assetDialog.data.accountType ?? "EPF"} onValueChange={(v) => {
+                        updateAssetField("accountType", v);
+                        if (v === "PPF") {
+                          updateAssetField("basicSalary", "");
+                          updateAssetField("dearnessAllowance", "");
+                          updateAssetField("employeeContributionPercent", "");
+                          updateAssetField("employerContributionPercent", "");
+                          updateAssetField("salaryGrowth", "");
+                          updateAssetField("includeEPS", "");
+                        }
+                      }}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent><SelectItem value="EPF">EPF (Employee Provident Fund)</SelectItem><SelectItem value="PPF">PPF (Public Provident Fund)</SelectItem></SelectContent>
+                      </Select>
+                    </div>
+
+                    {assetDialog.data.accountType === "PPF" ? (
+                      <>
+                        <div><Label className="text-xs">Annual PPF Contribution</Label><Input type="number" placeholder="0" value={assetDialog.data.amount ?? ""} onChange={(e) => updateAssetField("amount", e.target.value)} /></div>
+                        <div><Label className="text-xs">Current Balance</Label><Input type="number" placeholder="0" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} /></div>
+                        <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" step="0.1" value={assetDialog.data.interestRate ?? "7.1"} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
+                        <div><Label className="text-xs">Tenure (Years)</Label><Input type="number" placeholder="15" value={assetDialog.data.tenureYears ?? ""} onChange={(e) => updateAssetField("tenureYears", e.target.value)} /></div>
+                      </>
+                    ) : (
+                      <>
+                        <div><Label className="text-xs">Monthly Basic Salary</Label><Input type="number" placeholder="0" value={assetDialog.data.basicSalary ?? ""} onChange={(e) => updateAssetField("basicSalary", e.target.value)} /></div>
+                        <div><Label className="text-xs">Dearness Allowance (DA)</Label><Input type="number" placeholder="0" value={assetDialog.data.dearnessAllowance ?? ""} onChange={(e) => updateAssetField("dearnessAllowance", e.target.value)} /></div>
+                        <div><Label className="text-xs">Employee Contribution (%)</Label><Input type="number" placeholder="12" value={assetDialog.data.employeeContributionPercent ?? ""} onChange={(e) => updateAssetField("employeeContributionPercent", e.target.value)} /></div>
+                        <div><Label className="text-xs">Employer Contribution (%)</Label><Input type="number" placeholder="12" value={assetDialog.data.employerContributionPercent ?? ""} onChange={(e) => updateAssetField("employerContributionPercent", e.target.value)} /></div>
+                        <div><Label className="text-xs">Current EPF Balance</Label><Input type="number" placeholder="0" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} /></div>
+                        <div><Label className="text-xs">Current Age</Label><Input type="number" placeholder="30" value={assetDialog.data.age ?? ""} onChange={(e) => updateAssetField("age", e.target.value)} /></div>
+                        <div><Label className="text-xs">Retirement Age (auto)</Label><Input readOnly placeholder="60" value="60" className="bg-muted" /></div>
+                        <div><Label className="text-xs">Years to Retirement</Label><Input readOnly placeholder="30" value={assetDialog.data.tenureYears ?? ""} className="bg-muted" /></div>
+                        <div><Label className="text-xs">Expected Interest Rate (%)</Label><Input type="number" step="0.05" value={assetDialog.data.interestRate ?? "8.15"} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
+                        <div><Label className="text-xs">Expected Salary Growth (%)</Label><Input type="number" placeholder="5" value={assetDialog.data.salaryGrowth ?? ""} onChange={(e) => updateAssetField("salaryGrowth", e.target.value)} /></div>
+                        <div className="col-span-2 flex items-center gap-2 py-1">
+                          <input type="checkbox" id="includeEPS" checked={assetDialog.data.includeEPS === "true"} onChange={(e) => updateAssetField("includeEPS", String(e.target.checked))} className="rounded border-slate-300 text-primary focus:ring-primary h-4 w-4" />
+                          <Label htmlFor="includeEPS" className="text-xs font-medium cursor-pointer">Deduct EPS (8.33% up to ₹1,250/mo limit) from Employer Share</Label>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {assetDialog.type === "cash_bank" && (
+                  <div className="col-span-2 grid grid-cols-2 gap-3">
+                    <div className="col-span-2">
+                      <Label className="text-xs">Institution / Holder Name</Label>
+                      <Input placeholder="HDFC Savings, In Hand..." value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} />
+                    </div>
+                    <div className="col-span-2">
+                      <Label className="text-xs">Available Amount</Label>
+                      <Input type="number" placeholder="0" value={assetDialog.data.amount ?? ""} onChange={(e) => updateAssetField("amount", e.target.value)} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter className="mt-6 gap-2">
+              <Button variant="outline" onClick={() => setAssetDialog(null)}>Cancel</Button>
+              <Button onClick={handleSaveAsset} disabled={createAsset.isPending || updateAsset.isPending}>
+                {(createAsset.isPending || updateAsset.isPending) ? "Saving..." : "Save Asset"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </Layout>
+    );
+  }
+
   return (
     <Layout>
       <div className="space-y-6 pb-20 md:pb-0">
@@ -518,11 +1302,9 @@ export default function ClientDetailPage() {
                 <CardTitle className="text-xl text-slate-900">Family Tree</CardTitle>
                 <CardDescription className="text-slate-500">Visualize and manage family relationships and their financials</CardDescription>
               </div>
-              {!isAdmin && (
-                <Button size="sm" variant="outline" className="border-slate-200" onClick={() => setFamilyMemberDialog({ name: "", dob: "", phone: "", relation: "Child" })}>
-                  <Plus className="h-4 w-4 mr-2" /> Add Member
-                </Button>
-              )}
+              <Button size="sm" variant="outline" className="border-slate-200" onClick={() => setFamilyMemberDialog({ name: "", dob: "", phone: "", relation: "Child" })}>
+                <Plus className="h-4 w-4 mr-2" /> Add Member
+              </Button>
             </div>
           </CardHeader>
           <CardContent className="px-0">
@@ -537,141 +1319,345 @@ export default function ClientDetailPage() {
                 onDeleteMember={(id) => { if(confirm("Are you sure you want to delete this family member? All their data will be lost.")) deleteFamilyMember.mutate({ clientId, familyMemberId: id }, { onSuccess: () => queryClient.invalidateQueries({ queryKey: getListFamilyMembersQueryKey(clientId) }) }); }}
                 onSelectMember={(m) => setSelectedMemberId(m?.id ?? null)}
                 selectedMemberId={selectedMemberId}
-                readOnly={isAdmin}
+                readOnly={false}
               />
             )}
           </CardContent>
         </Card>
 
-        {chartData.length > 0 && (
-          <Card className="glass-panel border-slate-200 bg-white/60 shadow-sm">
-            <CardHeader><CardTitle className="text-base text-slate-900 font-semibold">Asset Breakdown</CardTitle></CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={380}>
-                <PieChart>
-                  <Pie data={chartData} cx="50%" cy="40%" outerRadius={110} dataKey="value" stroke="#fff" strokeWidth={2}>
-                    {chartData.map((_, index) => <Cell key={index} fill={CHART_COLORS[index % CHART_COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                    itemStyle={{ color: '#0f172a' }}
-                    formatter={(value: number) => formatCurrency(value)} 
-                  />
-                  <Legend 
-                    layout="vertical" 
-                    verticalAlign="bottom" 
-                    align="center"
-                    wrapperStyle={{ paddingTop: '10px', fontSize: '9px', paddingLeft: '10px', paddingRight: '10px' }}
-                    formatter={(value) => <span className="text-[10px] uppercase tracking-wider text-slate-500 font-bold">{value}</span>} 
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        )}
+        {chartData.length > 0 && (() => {
+          const total = chartData.reduce((sum, d) => sum + d.value, 0);
+          const sorted = [...chartData]
+            .map((item, i) => ({ ...item, color: CHART_COLORS[i % CHART_COLORS.length] }))
+            .sort((a, b) => b.value - a.value);
+          return (
+            <Card className="glass-panel border-slate-200 bg-white/60 shadow-sm overflow-visible">
+              <CardHeader className="pb-2">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-base text-slate-900 font-semibold">Asset Breakdown</CardTitle>
+                    <p className="text-[11px] text-slate-400 mt-0.5 uppercase tracking-widest font-medium">Portfolio Allocation</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold mb-0.5">Total Value</p>
+                    <p className="text-xl font-black text-slate-900">{formatCurrency(total)}</p>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-4">
+                {/* ── Stacked allocation strip ── */}
+                <div className="mb-2">
+                  <div className="flex rounded-2xl overflow-hidden h-9 gap-[2px] bg-slate-100">
+                    {sorted.map((item, index) => {
+                      const pct = total > 0 ? (item.value / total) * 100 : 0;
+                      if (pct < 0.4) return null;
+                      return (
+                        <div
+                          key={index}
+                          style={{ width: `${pct}%`, backgroundColor: item.color }}
+                          className="relative group h-full transition-all duration-200 hover:brightness-110 cursor-pointer"
+                        >
+                          {/* Tooltip */}
+                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 opacity-0 group-hover:opacity-100 transition-all duration-150 pointer-events-none z-20">
+                            <div className="bg-slate-900 text-white text-[11px] rounded-xl px-3 py-2 whitespace-nowrap shadow-2xl">
+                              <div className="font-bold text-white">{item.name}</div>
+                              <div className="text-slate-300 mt-0.5">{formatCurrency(item.value)}</div>
+                              <div className="text-slate-400 text-[10px]">{pct.toFixed(1)}% of portfolio</div>
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 border-[5px] border-transparent border-t-slate-900" />
+                            </div>
+                          </div>
+                          {/* Inline label for wide segments */}
+                          {pct > 12 && (
+                            <span className="absolute inset-0 flex items-center justify-center text-white font-black text-[11px] tracking-wide drop-shadow select-none">
+                              {pct.toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {/* Color legend chips */}
+                  <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
+                    {sorted.map((item, index) => (
+                      <div key={index} className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full flex-shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="text-[11px] text-slate-500 font-medium">{item.name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* ── Data table ── */}
+                <div className="border border-slate-100 rounded-2xl overflow-hidden mt-6">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        <th className="text-left text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 px-5 py-3 w-6">#</th>
+                        <th className="text-left text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 px-4 py-3">Asset Class</th>
+                        <th className="text-right text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 px-4 py-3">Value</th>
+                        <th className="text-right text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 px-5 py-3 hidden sm:table-cell w-48">Weight</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sorted.map((item, index) => {
+                        const pct = total > 0 ? (item.value / total) * 100 : 0;
+                        return (
+                          <tr key={index} className="border-t border-slate-100 hover:bg-slate-50/70 transition-colors group">
+                            <td className="px-5 py-3.5">
+                              <span className="text-[11px] font-bold text-slate-300">#{index + 1}</span>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className="h-3 w-3 rounded-[4px] flex-shrink-0 shadow-sm"
+                                  style={{ backgroundColor: item.color }}
+                                />
+                                <span className="font-semibold text-slate-700 text-[13px]">{item.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5 text-right">
+                              <span className="font-bold text-slate-900 text-[13px] tabular-nums">{formatCurrency(item.value)}</span>
+                            </td>
+                            <td className="px-5 py-3.5 hidden sm:table-cell">
+                              <div className="flex items-center gap-3 justify-end">
+                                <div className="flex-1 max-w-[100px] h-2 rounded-full bg-slate-100 overflow-hidden">
+                                  <div
+                                    className="h-full rounded-full"
+                                    style={{ width: `${pct}%`, backgroundColor: item.color }}
+                                  />
+                                </div>
+                                <span className="text-[12px] font-bold text-slate-500 w-10 text-right tabular-nums">{pct.toFixed(1)}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-slate-200 bg-slate-50">
+                        <td className="px-5 py-3.5" />
+                        <td className="px-4 py-3.5">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Total Portfolio</span>
+                        </td>
+                        <td className="px-4 py-3.5 text-right">
+                          <span className="font-black text-slate-900 text-[14px] tabular-nums">{formatCurrency(total)}</span>
+                        </td>
+                        <td className="px-5 py-3.5 text-right hidden sm:table-cell">
+                          <span className="text-[12px] font-bold text-slate-500">100%</span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          );
+        })()}
 
         <div className="grid grid-cols-1 gap-8">
           {/* Assets Section */}
           <div data-reveal data-reveal-delay="200">
-            <div id="assets-section" className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-slate-900">
-                {selectedMemberId === null ? "My Assets" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Assets`} 
-                <span className="ml-2 text-slate-400 text-sm font-medium">({assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})</span>
-              </h2>
-              {(!isAdmin || selectedMemberId === null) && (
-                <Button size="sm" className="gap-2 shadow-lg shadow-primary/20" onClick={() => { setAssetDialog({ type: "mutual_fund", data: {} }); }}>
-                  <Plus className="h-4 w-4" /> Add Asset
-                </Button>
-              )}
+            {/* ── Section heading ── */}
+            <div id="assets-section" className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {selectedMemberId === null ? "My Assets" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Assets`}
+                  <span className="ml-2 text-slate-400 text-sm font-medium">
+                    ({assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">Browse by asset class</p>
+              </div>
+              <Button size="sm" className="gap-2 shadow-lg shadow-primary/20" onClick={() => { setAssetDialog({ type: "mutual_fund", data: {} }); }}>
+                <Plus className="h-4 w-4" /> Add Asset
+              </Button>
             </div>
 
             {(() => {
               const filteredAssets = assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
-              if (filteredAssets.length === 0) return <Card className="glass-panel border-slate-200 border-dashed bg-slate-50/50"><CardContent className="py-8 text-center text-slate-400 text-sm">No assets yet</CardContent></Card>;
-              
-              return filteredAssets.map((asset) => (
-                <Card key={asset.id} className="glass-panel border-slate-100 bg-white hover:bg-slate-50 transition-all shadow-sm">
-                  <CardContent className="p-3 sm:p-6 py-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <Badge variant="secondary" className="text-[10px] mb-2 bg-slate-100 text-slate-600 border-slate-200 uppercase tracking-wider">
-                          {ASSET_LABELS[asset.assetType]}
-                          {(asset.data as any).investmentMethod ? ` - ${(asset.data as any).investmentMethod}` : ""}
-                        </Badge>
-                        <p className="text-lg font-bold text-slate-900">
-                          {asset.assetType === "provident_fund" 
-                            ? formatCurrency(calculatePFCurrentValue(asset.data as Record<string, any>).currentValue)
-                            : (asset.data as any).investmentMethod && (asset.data as any).investmentMethod !== "Lump sum"
-                            ? formatCurrency(calculateMFCurrentValue(asset.data))
-                            : formatCurrency(asset.value)}
-                        </p>
-                        <div className="mt-3 space-y-1.5 text-[10px] text-slate-500 bg-slate-50 p-3 rounded-xl border border-slate-100 shadow-inner">
-                          {Object.entries(asset.data as Record<string, unknown>).map(([k, v]) => {
-                            const skip = ["amount", "basicSalary", "dearnessAllowance", "employeeContributionPercent", "employerContributionPercent", "interestRate", "tenureYears", "currentBalance", "salaryGrowth", "includeEPS", "totalContribution", "startDate", "maturityDate", "monthlyInvestment", "investmentAmount", "institutionName", "payoutType"].includes(k);
-                            return !skip && (
-                              <div key={k} className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-1 border-b border-slate-200/50 last:border-0 gap-1">
-                                <span className="capitalize opacity-60 font-bold text-[9px] uppercase tracking-wider">{k.replace(/([A-Z])/g, " $1")}</span>
-                                <span className="text-slate-700 font-bold break-words sm:text-right flex-1 sm:ml-4">{String(v)}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-                        {asset.assetType === "mutual_fund" && (asset.data as any).assetName && (
-                          <>
-                            {!(asset.data as any).investmentMethod || (asset.data as any).investmentMethod === "Lump sum" ? (
-                              <MutualFundNav
-                                fundName={(asset.data as any).assetName}
-                                units={parseFloat((asset.data as any).units ?? "0")}
-                                investmentAmount={parseFloat((asset.data as any).amount ?? "0")}
-                              />
-                            ) : (asset.data as any).investmentMethod === "SIP" ? (
-                              <SIPValuation data={asset.data} />
-                            ) : (asset.data as any).investmentMethod === "SWP" ? (
-                              <SWPValuation data={asset.data} />
-                            ) : (asset.data as any).investmentMethod === "STP" ? (
-                              <STPValuation data={asset.data} />
-                            ) : null}
-                          </>
-                        )}
-                        {asset.assetType === "stock" && (asset.data as any).assetName && (
-                          <StockPriceDisplay
-                            stockName={(asset.data as any).assetName}
-                            units={parseFloat((asset.data as any).units ?? "0")}
-                            investmentAmount={parseFloat((asset.data as any).amount ?? "0")}
-                          />
-                        )}
-                        {asset.assetType === "fixed_deposit" && (
-                          <FDValuation data={asset.data as Record<string, unknown>} />
-                        )}
-                        {asset.assetType === "recurring_deposit" && (
-                          <RDValuation data={asset.data as Record<string, unknown>} />
-                        )}
-                        {asset.assetType === "provident_fund" && (
-                          <PFValuation data={asset.data as Record<string, unknown>} />
-                        )}
-                      </div>
-                      {(!isAdmin || selectedMemberId === null) && (
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100" onClick={() => {
-                            const data: Record<string, string> = {};
-                            Object.entries(asset.data as Record<string, unknown>).forEach(([k, v]) => { data[k] = String(v); });
-                            setAssetDialog({ type: asset.assetType, data, editId: asset.id });
-                          }}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => handleDeleteAsset(asset.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+
+              const GROUP_META: Record<string, { label: string; plural: string; gradient: string; badgeCls: string; color: string; icon: string }> = {
+                mutual_fund:       { label: "Mutual Fund",        plural: "Mutual Funds",       gradient: "from-amber-400 to-yellow-300",  badgeCls: "bg-amber-50 text-amber-700 border-amber-200",    color: "#f59e0b", icon: "📈" },
+                stock:             { label: "Stock",              plural: "Stocks",             gradient: "from-emerald-500 to-teal-400",  badgeCls: "bg-emerald-50 text-emerald-700 border-emerald-200", color: "#10b981", icon: "📊" },
+                fixed_deposit:     { label: "Fixed Deposit",     plural: "Fixed Deposits",     gradient: "from-blue-500 to-indigo-400",   badgeCls: "bg-blue-50 text-blue-700 border-blue-200",       color: "#3b82f6", icon: "🏦" },
+                recurring_deposit: { label: "Recurring Deposit", plural: "Recurring Deposits", gradient: "from-violet-500 to-purple-400", badgeCls: "bg-violet-50 text-violet-700 border-violet-200", color: "#8b5cf6", icon: "🔄" },
+                provident_fund:    { label: "PF / PPF",          plural: "Provident Fund",     gradient: "from-orange-500 to-rose-400",   badgeCls: "bg-orange-50 text-orange-700 border-orange-200", color: "#f97316", icon: "🛡️" },
+                cash_bank:         { label: "Cash & Bank",       plural: "Cash & Bank",        gradient: "from-slate-500 to-slate-400",   badgeCls: "bg-slate-100 text-slate-600 border-slate-200",   color: "#64748b", icon: "💵" },
+              };
+
+              // Build only groups that exist
+              const groups = ASSET_TYPES
+                .map(t => ({
+                  typeKey: t.value,
+                  meta: GROUP_META[t.value] ?? { label: t.label, plural: t.label, gradient: "from-slate-400 to-slate-300", badgeCls: "bg-slate-100 text-slate-600 border-slate-200", color: "#94a3b8", icon: "💼" },
+                  items: filteredAssets.filter(a => a.assetType === t.value),
+                }))
+                .filter(g => g.items.length > 0);
+
+              if (groups.length === 0) return (
+                <Card className="border-slate-200 border-dashed bg-slate-50/50 rounded-2xl">
+                  <CardContent className="py-16 text-center">
+                    <div className="mx-auto h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                      <Plus className="h-6 w-6 text-slate-400" />
                     </div>
+                    <p className="text-slate-500 font-semibold">No assets yet</p>
+                    <p className="text-slate-400 text-sm mt-1">Add your first asset to get started</p>
                   </CardContent>
                 </Card>
-              ));
+              );
+
+              // Clamp activeAssetTab to valid range
+              const safeTab = Math.min(activeAssetTab, groups.length - 1);
+              const activeGroup = groups[safeTab];
+
+              const circularNavItems = groups.map((g, index) => ({
+                name: g.meta.label,
+                icon: ASSET_ICONS[g.typeKey] ?? Compass,
+                href: "#",
+                onClick: () => {
+                  setActiveAssetTab(index);
+                  setViewHoldingsForType(null);
+                  setAssetCurrentPage(1);
+                },
+              }));
+
+              const formatValue = (k: string, v: unknown) => {
+                const str = String(v);
+                if (k === "price" || k === "amount") return formatCurrency(parseFloat(str) || 0);
+                return str;
+              };
+              const labelMap: Record<string, string> = {
+                date: "Purchase Date", price: "Buy Price", units: "Units",
+                accountType: "Account", age: "Age",
+              };
+              const skipKeys = ["amount","basicSalary","dearnessAllowance","employeeContributionPercent","employerContributionPercent","interestRate","tenureYears","currentBalance","salaryGrowth","includeEPS","totalContribution","startDate","maturityDate","monthlyInvestment","investmentAmount","institutionName","payoutType","assetName","investmentMethod"];
+
+              return (
+                <div className="space-y-6">
+                  {/* ── Premium Asset Navigation Trigger ── */}
+                  <div className="flex items-center justify-between bg-slate-900/95 backdrop-blur-md border border-amber-500/25 p-4 rounded-2xl shadow-xl shadow-amber-500/5">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 text-amber-500">
+                        <Compass className="w-5 h-5 animate-[spin_12s_linear_infinite]" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] uppercase tracking-widest text-amber-500/80 font-bold">Currently Viewing</p>
+                        <p className="text-sm font-extrabold text-slate-100">{activeGroup.meta.label}</p>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={() => setIsCircularNavOpen(true)}
+                      className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 border border-amber-400/30 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
+                    >
+                      <Compass className="w-4 h-4" />
+                      Switch Asset Class
+                    </Button>
+                  </div>
+
+                  <CircularNavigation
+                    isOpen={isCircularNavOpen}
+                    toggleMenu={() => setIsCircularNavOpen(!isCircularNavOpen)}
+                    navItems={circularNavItems}
+                  />
+
+                  {/* Detailed Summary Dashboard */}
+                  <Card className="overflow-hidden border border-slate-200 bg-white shadow-md rounded-3xl">
+                    <div className={`h-1.5 w-full bg-gradient-to-r ${activeGroup.meta.gradient}`} />
+                    <CardContent className="p-6 space-y-6">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                        <div>
+                          <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                            <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
+                            <span>{activeGroup.meta.label} Portfolio Summary</span>
+                          </h3>
+                          <p className="text-xs text-slate-500 mt-1">Unified performance metrics for all {activeGroup.items.length} dynamic asset holdings</p>
+                        </div>
+                        
+                        <Button
+                          onClick={() => setViewHoldingsForType(activeGroup.typeKey)}
+                          className={`bg-gradient-to-r ${activeGroup.meta.gradient} hover:opacity-90 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl flex items-center gap-2 shadow-lg shadow-amber-500/10 cursor-pointer`}
+                        >
+                          Explore Holdings & Visualisation
+                          <TrendingUp className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      {/* Stats Grid */}
+                      {(() => {
+                        const totals = activeGroup.items.reduce((acc, asset) => {
+                          const live = liveValues[asset.id];
+                          const vals = live ? live : getAssetCurrentAndInvested(asset);
+                          return {
+                            invested: acc.invested + vals.invested,
+                            current: acc.current + vals.current,
+                          };
+                        }, { invested: 0, current: 0 });
+
+                        const totalGain = totals.current - totals.invested;
+                        const gainPercentage = totals.invested > 0 ? (totalGain / totals.invested) * 100 : 0;
+                        const isPositive = totalGain >= 0;
+
+                        return (
+                          <div className="space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                              <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4.5">
+                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Total Invested Amount</p>
+                                <p className="text-2xl font-black text-slate-900 mt-1.5 tabular-nums">{formatCurrency(totals.invested)}</p>
+                                <p className="text-[10px] text-slate-400 mt-1">Cost value of holdings</p>
+                              </div>
+
+                              <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4.5">
+                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Current Market Value</p>
+                                <p className="text-2xl font-black text-slate-900 mt-1.5 tabular-nums">{formatCurrency(totals.current)}</p>
+                                <p className="text-[10px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                  Live Valued
+                                </p>
+                              </div>
+
+                              <div className={`border rounded-2xl p-4.5 ${isPositive ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-rose-50/30 border-rose-100/50'}`}>
+                                <p className={`text-[10px] font-extrabold uppercase tracking-widest ${isPositive ? 'text-emerald-700/80' : 'text-rose-700/80'}`}>Net Portfolio Returns</p>
+                                <p className={`text-2xl font-black mt-1.5 tabular-nums flex items-center gap-1.5 ${isPositive ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                  {isPositive ? "+" : ""}{formatCurrency(totalGain)}
+                                </p>
+                                <p className={`text-xs font-black mt-1 flex items-center gap-1 ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                  {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                                  {isPositive ? "+" : ""}{gainPercentage.toFixed(2)}% Growth
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Visual Breakdown Section */}
+                            <div className="space-y-3.5 border-t border-slate-100 pt-5">
+                              <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Asset Weight &amp; Distribution Visualisation</h4>
+                              <div className="space-y-4">
+                                {activeGroup.items.map((item) => (
+                                  <AssetDistributionCard
+                                    key={item.id}
+                                    item={item}
+                                    totals={totals}
+                                    onResolved={handleLiveValueResolved}
+                                    activeGroup={activeGroup}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                </div>
+              );
             })()}
           </div>
 
           <hr className="border-t border-slate-200" />
+
+
+
+
 
           {/* Liabilities Section */}
           <div className="space-y-4">
@@ -680,8 +1666,7 @@ export default function ClientDetailPage() {
                 {selectedMemberId === null ? "My Liabilities" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Liabilities`} 
                 <span className="ml-2 text-slate-400 text-sm font-medium">({liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})</span>
               </h2>
-              {(!isAdmin || selectedMemberId === null) && (
-                <Button size="sm" variant="destructive" className="gap-2 shadow-lg shadow-rose-500/20" onClick={() => setLiabilityDialog({ 
+              <Button size="sm" variant="destructive" className="gap-2 shadow-lg shadow-rose-500/20" onClick={() => setLiabilityDialog({ 
                   liabilityType: "Loans", 
                   loanType: "home_loan", 
                   lenderName: "", 
@@ -718,7 +1703,6 @@ export default function ClientDetailPage() {
                 })}>
                   <Plus className="h-4 w-4" /> Add Liability
                 </Button>
-              )}
             </div>
             {(() => {
               const filteredLiabilities = liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
@@ -820,66 +1804,64 @@ export default function ClientDetailPage() {
                           <LoanValuation liability={liability} />
                         )}
                       </div>
-                      {(!isAdmin || selectedMemberId === null) && (
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100" onClick={() => {
-                            const parts = liability.notes?.split("|") ?? [];
-                            const type = parts[0];
-                            setLiabilityDialog({
-                              editId: liability.id,
-                              liabilityType: type,
-                              loanType: liability.loanType,
-                              lenderName: liability.lenderName,
-                              totalLoanAmount: String(liability.totalLoanAmount),
-                              outstandingAmount: String(liability.outstandingAmount),
-                              interestRate: String(liability.interestRate),
-                              emi: String(liability.emi),
-                              startDate: liability.startDate?.split("T")[0] ?? "",
-                              endDate: liability.endDate?.split("T")[0] ?? "",
-                              interestType: parts.includes("Flat") ? "Flat" : "Reducing",
-                              subType: parts[parts.length - 1] === "Flat" ? "" : parts[parts.length - 1],
-                              tenure: "", 
-                              income: parts.find(p => p.startsWith("Income:"))?.split(":")[1] ?? "",
-                              tds: parts.find(p => p.startsWith("TDS:"))?.split(":")[1] ?? "",
-                              advanceTax: parts.find(p => p.startsWith("Advance:"))?.split(":")[1] ?? "",
-                              standardDeduction: parts.find(p => p.startsWith("StdDed:"))?.split(":")[1] ?? "75000",
-                              insuranceCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
-                              insuranceSubtype: parts.find(p => p.startsWith("Sub:"))?.split(":")[1] ?? "",
-                              propertyValue: "",
-                              insuranceRate: String(liability.interestRate),
-                              premium: parts.find(p => p.startsWith("Premium:"))?.split(":")[1] ?? "",
-                              tenureYears: parts.find(p => p.startsWith("Years:"))?.split(":")[1] ?? "",
-                              baseRate: parts.find(p => p.startsWith("Base:"))?.split(":")[1] ?? "",
-                              addOns: parts.find(p => p.startsWith("Addons:"))?.split(":")[1] ?? "",
-                              discounts: parts.find(p => p.startsWith("Disc:"))?.split(":")[1] ?? "",
-                              householdCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
-                              householdAmount: parts.find(p => p.startsWith("Amt:"))?.split(":")[1] ?? "",
-                              rent: parts.find(p => p.startsWith("Rent:"))?.split(":")[1] ?? "",
-                              maintenance: parts.find(p => p.startsWith("Maint:"))?.split(":")[1] ?? "",
-                              taxes: parts.find(p => p.startsWith("Taxes:"))?.split(":")[1] ?? "",
-                              electricity: parts.find(p => p.startsWith("Elec:"))?.split(":")[1] ?? "",
-                              water: parts.find(p => p.startsWith("Water:"))?.split(":")[1] ?? "",
-                              gas: parts.find(p => p.startsWith("Gas:"))?.split(":")[1] ?? "",
-                              internet: parts.find(p => p.startsWith("Net:"))?.split(":")[1] ?? "",
-                              groceries: parts.find(p => p.startsWith("Groceries:"))?.split(":")[1] ?? "",
-                              fees: parts.find(p => p.startsWith("Fees:"))?.split(":")[1] ?? "",
-                              books: parts.find(p => p.startsWith("Books:"))?.split(":")[1] ?? "",
-                              academicCosts: parts.find(p => p.startsWith("Acad:"))?.split(":")[1] ?? "",
-                              maidSalary: parts.find(p => p.startsWith("Maid:"))?.split(":")[1] ?? "",
-                              cookSalary: parts.find(p => p.startsWith("Cook:"))?.split(":")[1] ?? "",
-                              serviceCosts: parts.find(p => p.startsWith("Serv:"))?.split(":")[1] ?? "",
-                              medicalBills: parts.find(p => p.startsWith("MedB:"))?.split(":")[1] ?? "",
-                              medicines: parts.find(p => p.startsWith("MedI:"))?.split(":")[1] ?? "",
-                              miscCosts: parts.find(p => p.startsWith("Misc:"))?.split(":")[1] ?? "",
-                            });
-                          }}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => { if(confirm("Delete liability?")) deleteLiability.mutateAsync({ clientId: clientId!, liabilityId: liability.id }).then(invalidate); }}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      )}
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100" onClick={() => {
+                          const parts = liability.notes?.split("|") ?? [];
+                          const type = parts[0];
+                          setLiabilityDialog({
+                            editId: liability.id,
+                            liabilityType: type,
+                            loanType: liability.loanType,
+                            lenderName: liability.lenderName,
+                            totalLoanAmount: String(liability.totalLoanAmount),
+                            outstandingAmount: String(liability.outstandingAmount),
+                            interestRate: String(liability.interestRate),
+                            emi: String(liability.emi),
+                            startDate: liability.startDate?.split("T")[0] ?? "",
+                            endDate: liability.endDate?.split("T")[0] ?? "",
+                            interestType: parts.includes("Flat") ? "Flat" : "Reducing",
+                            subType: parts[parts.length - 1] === "Flat" ? "" : parts[parts.length - 1],
+                            tenure: "", 
+                            income: parts.find(p => p.startsWith("Income:"))?.split(":")[1] ?? "",
+                            tds: parts.find(p => p.startsWith("TDS:"))?.split(":")[1] ?? "",
+                            advanceTax: parts.find(p => p.startsWith("Advance:"))?.split(":")[1] ?? "",
+                            standardDeduction: parts.find(p => p.startsWith("StdDed:"))?.split(":")[1] ?? "75000",
+                            insuranceCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
+                            insuranceSubtype: parts.find(p => p.startsWith("Sub:"))?.split(":")[1] ?? "",
+                            propertyValue: "",
+                            insuranceRate: String(liability.interestRate),
+                            premium: parts.find(p => p.startsWith("Premium:"))?.split(":")[1] ?? "",
+                            tenureYears: parts.find(p => p.startsWith("Years:"))?.split(":")[1] ?? "",
+                            baseRate: parts.find(p => p.startsWith("Base:"))?.split(":")[1] ?? "",
+                            addOns: parts.find(p => p.startsWith("Addons:"))?.split(":")[1] ?? "",
+                            discounts: parts.find(p => p.startsWith("Disc:"))?.split(":")[1] ?? "",
+                            householdCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
+                            householdAmount: parts.find(p => p.startsWith("Amt:"))?.split(":")[1] ?? "",
+                            rent: parts.find(p => p.startsWith("Rent:"))?.split(":")[1] ?? "",
+                            maintenance: parts.find(p => p.startsWith("Maint:"))?.split(":")[1] ?? "",
+                            taxes: parts.find(p => p.startsWith("Taxes:"))?.split(":")[1] ?? "",
+                            electricity: parts.find(p => p.startsWith("Elec:"))?.split(":")[1] ?? "",
+                            water: parts.find(p => p.startsWith("Water:"))?.split(":")[1] ?? "",
+                            gas: parts.find(p => p.startsWith("Gas:"))?.split(":")[1] ?? "",
+                            internet: parts.find(p => p.startsWith("Net:"))?.split(":")[1] ?? "",
+                            groceries: parts.find(p => p.startsWith("Groceries:"))?.split(":")[1] ?? "",
+                            fees: parts.find(p => p.startsWith("Fees:"))?.split(":")[1] ?? "",
+                            books: parts.find(p => p.startsWith("Books:"))?.split(":")[1] ?? "",
+                            academicCosts: parts.find(p => p.startsWith("Acad:"))?.split(":")[1] ?? "",
+                            maidSalary: parts.find(p => p.startsWith("Maid:"))?.split(":")[1] ?? "",
+                            cookSalary: parts.find(p => p.startsWith("Cook:"))?.split(":")[1] ?? "",
+                            serviceCosts: parts.find(p => p.startsWith("Serv:"))?.split(":")[1] ?? "",
+                            medicalBills: parts.find(p => p.startsWith("MedB:"))?.split(":")[1] ?? "",
+                            medicines: parts.find(p => p.startsWith("MedI:"))?.split(":")[1] ?? "",
+                            miscCosts: parts.find(p => p.startsWith("Misc:"))?.split(":")[1] ?? "",
+                          });
+                        }}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => { if(confirm("Delete liability?")) deleteLiability.mutateAsync({ clientId: clientId!, liabilityId: liability.id }).then(invalidate); }}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -890,7 +1872,7 @@ export default function ClientDetailPage() {
       </div>
 
       <Dialog open={!!assetDialog} onOpenChange={(open) => !open && setAssetDialog(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto pr-4">
           <DialogHeader>
             <DialogTitle>{assetDialog?.editId ? "Edit Asset" : "Add Asset"}</DialogTitle>
           </DialogHeader>
@@ -965,83 +1947,265 @@ export default function ClientDetailPage() {
                 </div>
               )}
               {assetDialog.type === "stock" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2"><Label className="text-xs">Asset Name</Label><StockAutocomplete value={assetDialog.data.assetName ?? ""} onChange={(v) => updateAssetField("assetName", v)} /></div>
-                  <div><Label className="text-xs">Transaction Type</Label>
-                    <Select value={assetDialog.data.transactionType ?? "Buy"} onValueChange={(v) => updateAssetField("transactionType", v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="Buy">Buy</SelectItem><SelectItem value="Sell">Sell</SelectItem></SelectContent>
-                    </Select>
+                <div className="col-span-2 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Asset Selection</Label>
+                    <StockAutocomplete value={assetDialog.data.assetName ?? ""} onChange={(v) => updateAssetField("assetName", v)} />
                   </div>
-                  <div><Label className="text-xs">Date</Label><Input type="date" value={assetDialog.data.date ?? ""} onChange={(e) => updateAssetField("date", e.target.value)} /></div>
-                  <div><Label className="text-xs">Units</Label><Input type="number" value={assetDialog.data.units ?? ""} onChange={(e) => updateAssetField("units", e.target.value)} /></div>
-                  <div><Label className="text-xs">Price</Label><Input type="number" value={assetDialog.data.price ?? ""} onChange={(e) => updateAssetField("price", e.target.value)} /></div>
-                  <div className="col-span-2"><Label className="text-xs">Amount (auto)</Label><Input readOnly value={assetDialog.data.amount ?? "0"} className="bg-muted" /></div>
+                  
+                  <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/55 space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Transaction Type</Label>
+                        <Select value={assetDialog.data.transactionType ?? "Buy"} onValueChange={(v) => updateAssetField("transactionType", v)}>
+                          <SelectTrigger className="bg-white border-slate-200 text-slate-900 shadow-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-white border-slate-200 text-slate-900">
+                            <SelectItem value="Buy">Buy</SelectItem>
+                            <SelectItem value="Sell">Sell</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Transaction Date</Label>
+                        <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.date ?? ""} onChange={(e) => updateAssetField("date", e.target.value)} />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Units</Label>
+                        <Input type="number" placeholder="e.g. 10" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.units ?? ""} onChange={(e) => updateAssetField("units", e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Price per Unit (₹)</Label>
+                        <Input type="number" placeholder="e.g. 150.00" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.price ?? ""} onChange={(e) => updateAssetField("price", e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-emerald-100 bg-emerald-50/30 flex items-center justify-between shadow-sm">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-700">Total Transaction Amount</p>
+                      <p className="text-2xl font-extrabold text-slate-900 mt-0.5">
+                        {formatCurrency(parseFloat(assetDialog.data.amount || "0"))}
+                      </p>
+                    </div>
+                    <div className="h-10 w-10 rounded-full bg-emerald-100/80 flex items-center justify-center text-emerald-600">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                  </div>
                 </div>
               )}
               {assetDialog.type === "fixed_deposit" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2"><Label className="text-xs">Institution</Label><Input value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} /></div>
-                  <div><Label className="text-xs">Investment Amount</Label><Input type="number" value={assetDialog.data.investmentAmount ?? ""} onChange={(e) => updateAssetField("investmentAmount", e.target.value)} /></div>
-                  <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
-                  <div><Label className="text-xs">Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div>
-                  <div><Label className="text-xs">Maturity Date</Label><Input type="date" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} /></div>
-                  <div className="col-span-2"><Label className="text-xs">Payout Type</Label>
-                    <Select value={assetDialog.data.payoutType ?? "Annual"} onValueChange={(v) => updateAssetField("payoutType", v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="Annual">Annual</SelectItem><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="Quarterly">Quarterly</SelectItem></SelectContent>
-                    </Select>
+                <div className="col-span-2 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Institution Details</Label>
+                    <Input placeholder="e.g. HDFC Bank, ICICI Bank" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} />
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/55 space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Investment Amount (₹)</Label>
+                        <Input type="number" placeholder="e.g. 1,00,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.investmentAmount ?? ""} onChange={(e) => updateAssetField("investmentAmount", e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Interest Rate (% p.a.)</Label>
+                        <Input type="number" placeholder="e.g. 7.1" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Start Date</Label>
+                        <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Maturity Date</Label>
+                        <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">Interest Payout Type</Label>
+                      <Select value={assetDialog.data.payoutType ?? "Annual"} onValueChange={(v) => updateAssetField("payoutType", v)}>
+                        <SelectTrigger className="bg-white border-slate-200 text-slate-900 shadow-sm"><SelectValue /></SelectTrigger>
+                        <SelectContent className="bg-white border-slate-200 text-slate-900">
+                          <SelectItem value="Annual">Cumulative / Annual Payout</SelectItem>
+                          <SelectItem value="Monthly">Monthly Payout</SelectItem>
+                          <SelectItem value="Quarterly">Quarterly Payout</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
               )}
               {assetDialog.type === "recurring_deposit" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2"><Label className="text-xs">Institution</Label><Input value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} /></div>
-                  <div><Label className="text-xs">Monthly Investment</Label><Input type="number" value={assetDialog.data.monthlyInvestment ?? ""} onChange={(e) => updateAssetField("monthlyInvestment", e.target.value)} /></div>
-                  <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
-                  <div><Label className="text-xs">Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div>
-                  <div><Label className="text-xs">Maturity Date</Label><Input type="date" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} /></div>
+                <div className="col-span-2 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Institution Details</Label>
+                    <Input placeholder="e.g. SBI, Post Office" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} />
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/55 space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Monthly Contribution (₹)</Label>
+                        <Input type="number" placeholder="e.g. 5,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.monthlyInvestment ?? ""} onChange={(e) => updateAssetField("monthlyInvestment", e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Interest Rate (% p.a.)</Label>
+                        <Input type="number" placeholder="e.g. 6.8" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Start Date</Label>
+                        <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Maturity Date</Label>
+                        <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
               {assetDialog.type === "provident_fund" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-xs">Account Type</Label>
-                    <Select value={assetDialog.data.accountType ?? "PPF"} onValueChange={(v) => updateAssetField("accountType", v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="PPF">PPF</SelectItem><SelectItem value="EPF">EPF</SelectItem></SelectContent>
-                    </Select>
+                <div className="col-span-2 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Fund Type</Label>
+                    <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                      <button
+                        type="button"
+                        className={cn(
+                          "py-2 text-xs font-bold rounded-lg transition-all",
+                          (assetDialog.data.accountType ?? "PPF") === "PPF"
+                            ? "bg-white text-slate-900 shadow-sm border border-slate-200/50"
+                            : "text-slate-500 hover:text-slate-900 bg-transparent border border-transparent"
+                        )}
+                        onClick={() => updateAssetField("accountType", "PPF")}
+                      >
+                        Public Provident Fund (PPF)
+                      </button>
+                      <button
+                        type="button"
+                        className={cn(
+                          "py-2 text-xs font-bold rounded-lg transition-all",
+                          assetDialog.data.accountType === "EPF"
+                            ? "bg-white text-slate-900 shadow-sm border border-slate-200/50"
+                            : "text-slate-500 hover:text-slate-900 bg-transparent border border-transparent"
+                        )}
+                        onClick={() => updateAssetField("accountType", "EPF")}
+                      >
+                        Employee Provident Fund (EPF)
+                      </button>
+                    </div>
                   </div>
+
                   {assetDialog.data.accountType === "EPF" ? (
-                    <>
-                      <div><Label className="text-xs">Your Age</Label><Input type="number" placeholder="e.g. 30" value={assetDialog.data.age ?? ""} onChange={(e) => updateAssetField("age", e.target.value)} /></div>
-                      <div><Label className="text-xs">Basic Salary (monthly)</Label><Input type="number" value={assetDialog.data.basicSalary ?? ""} onChange={(e) => updateAssetField("basicSalary", e.target.value)} /></div>
-                      <div><Label className="text-xs">Dearness Allowance (monthly)</Label><Input type="number" value={assetDialog.data.dearnessAllowance ?? ""} onChange={(e) => updateAssetField("dearnessAllowance", e.target.value)} /></div>
-                      <div><Label className="text-xs">Contribution (%)</Label><Input type="number" placeholder="12" value={assetDialog.data.employeeContributionPercent ?? ""} onChange={(e) => updateAssetField("employeeContributionPercent", e.target.value)} /></div>
-                      <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" placeholder="8.15" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
-                      <div><Label className="text-xs">Investment Duration (years)</Label><Input type="number" value={assetDialog.data.tenureYears ?? ""} onChange={(e) => updateAssetField("tenureYears", e.target.value)} /></div>
-                      <div><Label className="text-xs">Current EPF Balance (optional)</Label><Input type="number" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} /></div>
-                      <div><Label className="text-xs">Annual increase in salary (%) (optional)</Label><Input type="number" value={assetDialog.data.salaryGrowth ?? ""} onChange={(e) => updateAssetField("salaryGrowth", e.target.value)} /></div>
-                    </>
+                    <div className="space-y-4">
+                      <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                        <p className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b pb-2">Salary Details</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs font-medium text-slate-700">Basic Salary (Monthly)</Label>
+                            <Input type="number" placeholder="e.g. 50,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.basicSalary ?? ""} onChange={(e) => updateAssetField("basicSalary", e.target.value)} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-medium text-slate-700">Dearness Allowance (Monthly)</Label>
+                            <Input type="number" placeholder="e.g. 10,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.dearnessAllowance ?? ""} onChange={(e) => updateAssetField("dearnessAllowance", e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                        <p className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b pb-2">Contribution & Growth</p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <Label className="text-xs font-medium text-slate-700">Your Current Age</Label>
+                            <Input type="number" placeholder="e.g. 30" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.age ?? ""} onChange={(e) => updateAssetField("age", e.target.value)} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-medium text-slate-700">Contribution Rate (%)</Label>
+                            <Input type="number" placeholder="default 12" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.employeeContributionPercent ?? ""} onChange={(e) => updateAssetField("employeeContributionPercent", e.target.value)} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-medium text-slate-700">EPF Interest Rate (%)</Label>
+                            <Input type="number" placeholder="default 8.15" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} />
+                          </div>
+                          <div>
+                            <Label className="text-xs font-medium text-slate-700">Duration (Years)</Label>
+                            <Input type="number" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.tenureYears ?? ""} onChange={(e) => updateAssetField("tenureYears", e.target.value)} />
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-3 pt-2">
+                          <div className="col-span-2">
+                            <Label className="text-xs font-medium text-slate-700">Current EPF Balance (₹)</Label>
+                            <Input type="number" placeholder="Optional - Current balance if any" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} />
+                          </div>
+                          <div className="col-span-2">
+                            <Label className="text-xs font-medium text-slate-700">Expected Annual Salary Growth (%)</Label>
+                            <Input type="number" placeholder="Optional - Annual hike percent" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.salaryGrowth ?? ""} onChange={(e) => updateAssetField("salaryGrowth", e.target.value)} />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
-                    <>
-                      <div><Label className="text-xs">Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div>
-                      <div><Label className="text-xs">Maturity Date</Label><Input type="date" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} /></div>
-                      <div><Label className="text-xs">Annual Contribution (Yearly deposit)</Label><Input type="number" value={assetDialog.data.totalContribution ?? ""} onChange={(e) => updateAssetField("totalContribution", e.target.value)} /></div>
-                      <div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div>
-                    </>
+                    <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                      <p className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b pb-2">PPF Contribution Details</p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs font-medium text-slate-700">Start Date</Label>
+                          <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} />
+                        </div>
+                        <div>
+                          <Label className="text-xs font-medium text-slate-700">Maturity Date</Label>
+                          <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label className="text-xs font-medium text-slate-700">Annual Contribution (₹)</Label>
+                          <Input type="number" placeholder="e.g. 1,50,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.totalContribution ?? ""} onChange={(e) => updateAssetField("totalContribution", e.target.value)} />
+                        </div>
+                        <div>
+                          <Label className="text-xs font-medium text-slate-700">PPF Interest Rate (% p.a.)</Label>
+                          <Input type="number" placeholder="default 7.1" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} />
+                        </div>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
               {assetDialog.type === "cash_bank" && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-xs">Bank Name</Label><Input value={assetDialog.data.bankName ?? ""} onChange={(e) => updateAssetField("bankName", e.target.value)} /></div>
-                  <div><Label className="text-xs">Account Type</Label>
-                    <Select value={assetDialog.data.accountType ?? "Savings"} onValueChange={(v) => updateAssetField("accountType", v)}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent><SelectItem value="Savings">Savings</SelectItem><SelectItem value="Current">Current</SelectItem></SelectContent>
-                    </Select>
+                <div className="col-span-2 space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Account Details</Label>
+                    <Input placeholder="e.g. HDFC Bank, ICICI Bank Cash Account" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.bankName ?? ""} onChange={(e) => updateAssetField("bankName", e.target.value)} />
                   </div>
-                  <div className="col-span-2"><Label className="text-xs">Current Balance</Label><Input type="number" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} /></div>
+
+                  <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="col-span-2">
+                        <Label className="text-xs font-medium text-slate-700">Account Category</Label>
+                        <Select value={assetDialog.data.accountType ?? "Savings"} onValueChange={(v) => updateAssetField("accountType", v)}>
+                          <SelectTrigger className="bg-white border-slate-200 text-slate-900 shadow-sm"><SelectValue /></SelectTrigger>
+                          <SelectContent className="bg-white border-slate-200 text-slate-900">
+                            <SelectItem value="Savings">Savings Account</SelectItem>
+                            <SelectItem value="Current">Current Account</SelectItem>
+                            <SelectItem value="Cash">Physical Cash</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-xs font-medium text-slate-700">Current Available Balance (₹)</Label>
+                        <Input type="number" placeholder="e.g. 50,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1054,7 +2218,7 @@ export default function ClientDetailPage() {
       </Dialog>
 
       <Dialog open={!!liabilityDialog} onOpenChange={(open) => !open && setLiabilityDialog(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto pr-4">
           <DialogHeader>
             <DialogTitle>{liabilityDialog?.editId ? "Edit Liability" : "Add Liability"}</DialogTitle>
           </DialogHeader>

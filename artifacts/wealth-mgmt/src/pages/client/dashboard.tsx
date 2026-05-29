@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { formatCurrency, formatDate } from "@/lib/utils-format";
+import { cn } from "@/lib/utils";
 import { 
   Plus, 
   Users, 
@@ -583,12 +584,271 @@ export default function ClientDashboard() {
               )}
             </div>
           )}
-          {assetDialog.type === "stock" && (<div className="grid grid-cols-2 gap-3"><div className="col-span-2"><Label className="text-xs">Asset Name</Label><StockAutocomplete value={assetDialog.data.assetName ?? ""} onChange={(v) => updateAssetField("assetName", v)} /></div><div><Label className="text-xs">Transaction Type</Label><Select value={assetDialog.data.transactionType ?? "Buy"} onValueChange={(v) => updateAssetField("transactionType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Buy">Buy</SelectItem><SelectItem value="Sell">Sell</SelectItem></SelectContent></Select></div><div><Label className="text-xs">Date</Label><Input type="date" value={assetDialog.data.date ?? ""} onChange={(e) => updateAssetField("date", e.target.value)} /></div><div><Label className="text-xs">Units</Label><Input type="number" value={assetDialog.data.units ?? ""} onChange={(e) => updateAssetField("units", e.target.value)} /></div><div><Label className="text-xs">Price</Label><Input type="number" value={assetDialog.data.price ?? ""} onChange={(e) => updateAssetField("price", e.target.value)} /></div><div className="col-span-2"><Label className="text-xs">Amount (auto)</Label><Input readOnly value={assetDialog.data.amount ?? "0"} className="bg-muted" /></div></div>)}
-          {assetDialog.type === "fixed_deposit" && (<div className="grid grid-cols-2 gap-3"><div className="col-span-2"><Label className="text-xs">Institution</Label><Input value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} /></div><div><Label className="text-xs">Investment Amount</Label><Input type="number" value={assetDialog.data.investmentAmount ?? ""} onChange={(e) => updateAssetField("investmentAmount", e.target.value)} /></div><div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div><div><Label className="text-xs">Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div><div><Label className="text-xs">Maturity Date</Label><Input type="date" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} /></div><div className="col-span-2"><Label className="text-xs">Payout Type</Label><Select value={assetDialog.data.payoutType ?? "Annual"} onValueChange={(v) => updateAssetField("payoutType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Annual">Annual</SelectItem><SelectItem value="Monthly">Monthly</SelectItem><SelectItem value="Quarterly">Quarterly</SelectItem></SelectContent></Select></div></div>)}
-          {assetDialog.type === "recurring_deposit" && (<div className="grid grid-cols-2 gap-3"><div className="col-span-2"><Label className="text-xs">Institution</Label><Input value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} /></div><div><Label className="text-xs">Monthly Investment</Label><Input type="number" value={assetDialog.data.monthlyInvestment ?? ""} onChange={(e) => updateAssetField("monthlyInvestment", e.target.value)} /></div><div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div><div><Label className="text-xs">Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div><div><Label className="text-xs">Maturity Date</Label><Input type="date" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} /></div></div>)}
-          {assetDialog.type === "provident_fund" && (<div className="grid grid-cols-2 gap-3"><div><Label className="text-xs">Account Type</Label><Select value={assetDialog.data.accountType ?? "PPF"} onValueChange={(v) => updateAssetField("accountType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="PPF">PPF</SelectItem><SelectItem value="EPF">EPF</SelectItem></SelectContent></Select></div>{assetDialog.data.accountType === "EPF" ? (<><div className="col-span-2 grid grid-cols-2 gap-3"><div><Label className="text-xs">Basic Salary (monthly)</Label><Input type="number" value={assetDialog.data.basicSalary ?? ""} onChange={(e) => updateAssetField("basicSalary", e.target.value)} /></div><div><Label className="text-xs">Dearness Allowance (monthly)</Label><Input type="number" value={assetDialog.data.dearnessAllowance ?? ""} onChange={(e) => updateAssetField("dearnessAllowance", e.target.value)} /></div><div><Label className="text-xs">Your Age</Label><Input type="number" placeholder="30" value={assetDialog.data.age ?? ""} onChange={(e) => updateAssetField("age", e.target.value)} /></div><div><Label className="text-xs">Contribution (%)</Label><Input type="number" placeholder="12" value={assetDialog.data.employeeContributionPercent ?? ""} onChange={(e) => updateAssetField("employeeContributionPercent", e.target.value)} /></div><div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" placeholder="8.15" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div><div><Label className="text-xs">Investment Duration (years)</Label><Input type="number" value={assetDialog.data.tenureYears ?? ""} onChange={(e) => updateAssetField("tenureYears", e.target.value)} /></div><div><Label className="text-xs">Current EPF Balance (optional)</Label><Input type="number" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} /></div><div><Label className="text-xs">Annual increase in salary (%) (optional)</Label><Input type="number" value={assetDialog.data.salaryGrowth ?? ""} onChange={(e) => updateAssetField("salaryGrowth", e.target.value)} /></div></div></>) : (<><div className="col-span-2 grid grid-cols-2 gap-3"><div><Label className="text-xs">Start Date</Label><Input type="date" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} /></div><div><Label className="text-xs">Maturity Date</Label><Input type="date" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} /></div><div><Label className="text-xs">Annual Contribution (Yearly deposit)</Label><Input type="number" value={assetDialog.data.totalContribution ?? ""} onChange={(e) => updateAssetField("totalContribution", e.target.value)} /></div><div><Label className="text-xs">Interest Rate (%)</Label><Input type="number" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} /></div></div></>)}</div>)}
-          {assetDialog.type === "cash_bank" && (<div className="grid grid-cols-2 gap-3"><div><Label className="text-xs">Bank Name</Label><Input value={assetDialog.data.bankName ?? ""} onChange={(e) => updateAssetField("bankName", e.target.value)} /></div><div><Label className="text-xs">Account Type</Label><Select value={assetDialog.data.accountType ?? "Savings"} onValueChange={(v) => updateAssetField("accountType", v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Savings">Savings</SelectItem><SelectItem value="Current">Current</SelectItem></SelectContent></Select></div><div className="col-span-2"><Label className="text-xs">Current Balance</Label><Input type="number" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} /></div></div>)}
-        </div>)}<DialogFooter><Button variant="outline" onClick={() => setAssetDialog(null)}>Cancel</Button><Button onClick={() => { if (assetDialog.editId) updateAssetMutation.mutateAsync({ clientId: clientId!, assetId: assetDialog.editId, data: { data: assetDialog.data, familyMemberId: selectedMemberId } }).then(() => { invalidate(); setAssetDialog(null); }); else createAsset.mutateAsync({ clientId: clientId!, data: { assetType: assetDialog.type as any, data: assetDialog.data, familyMemberId: selectedMemberId } }).then(() => { invalidate(); setAssetDialog(null); }); }}>Save</Button></DialogFooter></DialogContent>
+          {assetDialog.type === "stock" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Asset Selection</Label>
+                <StockAutocomplete value={assetDialog.data.assetName ?? ""} onChange={(v) => updateAssetField("assetName", v)} />
+              </div>
+              
+              <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Transaction Type</Label>
+                    <Select value={assetDialog.data.transactionType ?? "Buy"} onValueChange={(v) => updateAssetField("transactionType", v)}>
+                      <SelectTrigger className="bg-white border-slate-200 text-slate-900 shadow-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 text-slate-900">
+                        <SelectItem value="Buy">Buy</SelectItem>
+                        <SelectItem value="Sell">Sell</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Transaction Date</Label>
+                    <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.date ?? ""} onChange={(e) => updateAssetField("date", e.target.value)} />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Units</Label>
+                    <Input type="number" placeholder="e.g. 10" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.units ?? ""} onChange={(e) => updateAssetField("units", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Price per Unit (₹)</Label>
+                    <Input type="number" placeholder="e.g. 150.00" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.price ?? ""} onChange={(e) => updateAssetField("price", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-2xl border border-emerald-100 bg-emerald-50/30 flex items-center justify-between shadow-sm">
+                <div>
+                  <p className="text-[10px] uppercase tracking-wider font-bold text-emerald-700">Total Transaction Amount</p>
+                  <p className="text-2xl font-extrabold text-slate-900 mt-0.5">
+                    {formatCurrency(parseFloat(assetDialog.data.amount || "0"))}
+                  </p>
+                </div>
+                <div className="h-10 w-10 rounded-full bg-emerald-100/80 flex items-center justify-center text-emerald-600">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+              </div>
+            </div>
+          )}
+          {assetDialog.type === "fixed_deposit" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Institution Details</Label>
+                <Input placeholder="e.g. HDFC Bank, ICICI Bank" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} />
+              </div>
+
+              <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Investment Amount (₹)</Label>
+                    <Input type="number" placeholder="e.g. 1,00,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.investmentAmount ?? ""} onChange={(e) => updateAssetField("investmentAmount", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Interest Rate (% p.a.)</Label>
+                    <Input type="number" placeholder="e.g. 7.1" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Start Date</Label>
+                    <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Maturity Date</Label>
+                    <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} />
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-xs font-medium text-slate-700">Interest Payout Type</Label>
+                  <Select value={assetDialog.data.payoutType ?? "Annual"} onValueChange={(v) => updateAssetField("payoutType", v)}>
+                    <SelectTrigger className="bg-white border-slate-200 text-slate-900 shadow-sm"><SelectValue /></SelectTrigger>
+                    <SelectContent className="bg-white border-slate-200 text-slate-900">
+                      <SelectItem value="Annual">Cumulative / Annual Payout</SelectItem>
+                      <SelectItem value="Monthly">Monthly Payout</SelectItem>
+                      <SelectItem value="Quarterly">Quarterly Payout</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
+          {assetDialog.type === "recurring_deposit" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Institution Details</Label>
+                <Input placeholder="e.g. SBI, Post Office" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.institutionName ?? ""} onChange={(e) => updateAssetField("institutionName", e.target.value)} />
+              </div>
+
+              <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Monthly Contribution (₹)</Label>
+                    <Input type="number" placeholder="e.g. 5,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.monthlyInvestment ?? ""} onChange={(e) => updateAssetField("monthlyInvestment", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Interest Rate (% p.a.)</Label>
+                    <Input type="number" placeholder="e.g. 6.8" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Start Date</Label>
+                    <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} />
+                  </div>
+                  <div>
+                    <Label className="text-xs font-medium text-slate-700">Maturity Date</Label>
+                    <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {assetDialog.type === "provident_fund" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Fund Type</Label>
+                <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    className={cn(
+                      "py-2 text-xs font-bold rounded-lg transition-all",
+                      (assetDialog.data.accountType ?? "PPF") === "PPF"
+                        ? "bg-white text-slate-900 shadow-sm border border-slate-200/50"
+                        : "text-slate-500 hover:text-slate-900 bg-transparent border border-transparent"
+                    )}
+                    onClick={() => updateAssetField("accountType", "PPF")}
+                  >
+                    Public Provident Fund (PPF)
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(
+                      "py-2 text-xs font-bold rounded-lg transition-all",
+                      assetDialog.data.accountType === "EPF"
+                        ? "bg-white text-slate-900 shadow-sm border border-slate-200/50"
+                        : "text-slate-500 hover:text-slate-900 bg-transparent border border-transparent"
+                    )}
+                    onClick={() => updateAssetField("accountType", "EPF")}
+                  >
+                    Employee Provident Fund (EPF)
+                  </button>
+                </div>
+              </div>
+
+              {assetDialog.data.accountType === "EPF" ? (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                    <p className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b pb-2">Salary Details</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Basic Salary (Monthly)</Label>
+                        <Input type="number" placeholder="e.g. 50,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.basicSalary ?? ""} onChange={(e) => updateAssetField("basicSalary", e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Dearness Allowance (Monthly)</Label>
+                        <Input type="number" placeholder="e.g. 10,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.dearnessAllowance ?? ""} onChange={(e) => updateAssetField("dearnessAllowance", e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                    <p className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b pb-2">Contribution & Growth</p>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Your Current Age</Label>
+                        <Input type="number" placeholder="e.g. 30" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.age ?? ""} onChange={(e) => updateAssetField("age", e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Contribution Rate (%)</Label>
+                        <Input type="number" placeholder="default 12" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.employeeContributionPercent ?? ""} onChange={(e) => updateAssetField("employeeContributionPercent", e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">EPF Interest Rate (%)</Label>
+                        <Input type="number" placeholder="default 8.15" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} />
+                      </div>
+                      <div>
+                        <Label className="text-xs font-medium text-slate-700">Duration (Years)</Label>
+                        <Input type="number" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.tenureYears ?? ""} onChange={(e) => updateAssetField("tenureYears", e.target.value)} />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      <div className="col-span-2">
+                        <Label className="text-xs font-medium text-slate-700">Current EPF Balance (₹)</Label>
+                        <Input type="number" placeholder="Optional - Current balance if any" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} />
+                      </div>
+                      <div className="col-span-2">
+                        <Label className="text-xs font-medium text-slate-700">Expected Annual Salary Growth (%)</Label>
+                        <Input type="number" placeholder="Optional - Annual hike percent" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.salaryGrowth ?? ""} onChange={(e) => updateAssetField("salaryGrowth", e.target.value)} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                  <p className="text-xs font-bold text-slate-800 uppercase tracking-wider border-b pb-2">PPF Contribution Details</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">Start Date</Label>
+                      <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.startDate ?? ""} onChange={(e) => updateAssetField("startDate", e.target.value)} />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">Maturity Date</Label>
+                      <Input type="date" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.maturityDate ?? ""} onChange={(e) => updateAssetField("maturityDate", e.target.value)} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">Annual Contribution (₹)</Label>
+                      <Input type="number" placeholder="e.g. 1,50,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.totalContribution ?? ""} onChange={(e) => updateAssetField("totalContribution", e.target.value)} />
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-slate-700">PPF Interest Rate (% p.a.)</Label>
+                      <Input type="number" placeholder="default 7.1" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.interestRate ?? ""} onChange={(e) => updateAssetField("interestRate", e.target.value)} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+          {assetDialog.type === "cash_bank" && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Account Details</Label>
+                <Input placeholder="e.g. HDFC Bank, ICICI Bank Cash Account" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.bankName ?? ""} onChange={(e) => updateAssetField("bankName", e.target.value)} />
+              </div>
+
+              <div className="p-4 rounded-2xl border border-slate-100 bg-slate-50/50 space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="col-span-2">
+                    <Label className="text-xs font-medium text-slate-700">Account Category</Label>
+                    <Select value={assetDialog.data.accountType ?? "Savings"} onValueChange={(v) => updateAssetField("accountType", v)}>
+                      <SelectTrigger className="bg-white border-slate-200 text-slate-900 shadow-sm"><SelectValue /></SelectTrigger>
+                      <SelectContent className="bg-white border-slate-200 text-slate-900">
+                        <SelectItem value="Savings">Savings Account</SelectItem>
+                        <SelectItem value="Current">Current Account</SelectItem>
+                        <SelectItem value="Cash">Physical Cash</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-xs font-medium text-slate-700">Current Available Balance (₹)</Label>
+                    <Input type="number" placeholder="e.g. 50,000" className="bg-white border-slate-200 text-slate-900 shadow-sm" value={assetDialog.data.currentBalance ?? ""} onChange={(e) => updateAssetField("currentBalance", e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      <DialogFooter><Button variant="outline" onClick={() => setAssetDialog(null)}>Cancel</Button><Button onClick={() => { if (!assetDialog) return; if (assetDialog.editId) updateAssetMutation.mutateAsync({ clientId: clientId!, assetId: assetDialog.editId, data: { data: assetDialog.data, familyMemberId: selectedMemberId } }).then(() => { invalidate(); setAssetDialog(null); }); else createAsset.mutateAsync({ clientId: clientId!, data: { assetType: assetDialog.type as any, data: assetDialog.data, familyMemberId: selectedMemberId } }).then(() => { invalidate(); setAssetDialog(null); }); }}>Save</Button></DialogFooter></DialogContent>
       </Dialog>
 
       <Dialog open={!!liabilityDialog} onOpenChange={(open) => !open && setLiabilityDialog(null)}>

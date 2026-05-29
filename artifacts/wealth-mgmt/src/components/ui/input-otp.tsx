@@ -9,19 +9,25 @@ const InputOTPExtraContext = React.createContext<{ type?: string }>({})
 const InputOTP = React.forwardRef<
   React.ElementRef<typeof OTPInput>,
   React.ComponentPropsWithoutRef<typeof OTPInput>
->(({ className, containerClassName, ...props }, ref) => (
-  <InputOTPExtraContext.Provider value={{ type: props.type }}>
-    <OTPInput
-      ref={ref}
-      containerClassName={cn(
-        "flex items-center gap-2 has-[:disabled]:opacity-50",
-        containerClassName
-      )}
-      className={cn("disabled:cursor-not-allowed", className)}
-      {...props}
-    />
-  </InputOTPExtraContext.Provider>
-))
+>(({ className, containerClassName, type, ...props }, ref) => {
+  const isPassword = type === "password"
+  const nativeType = isPassword ? "text" : type
+
+  return (
+    <InputOTPExtraContext.Provider value={{ type }}>
+      <OTPInput
+        ref={ref}
+        type={nativeType}
+        containerClassName={cn(
+          "flex items-center gap-2 has-[:disabled]:opacity-50",
+          containerClassName
+        )}
+        className={cn("disabled:cursor-not-allowed", className)}
+        {...props}
+      />
+    </InputOTPExtraContext.Provider>
+  )
+})
 InputOTP.displayName = "InputOTP"
 
 const InputOTPGroup = React.forwardRef<

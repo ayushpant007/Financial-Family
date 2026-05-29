@@ -1,38 +1,14 @@
 import { useState } from "react";
 import { useListClients, useDeleteClient, useGetClientSummary, getListClientsQueryKey, getGetClientSummaryQueryKey } from "@workspace/api-client-react";
 import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { Layout } from "@/components/layout";
 import { formatCurrency } from "@/lib/utils-format";
 import { PlusCircle, Search, ArrowRight, Trash2, Users } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ScrollingFeatureShowcase } from "@/components/ui/interactive-scrolling-story-component";
-
 import { usePageBackground } from "@/hooks/usePageBackground";
-
-const CLIENTS_SLIDES = [
-  {
-    title: "Know Every Client, Deeply",
-    description: "Each client profile is a living document — net worth, asset mix, liabilities, family structure, and documents, all in one place.",
-    image: "/assets/step1.png",
-    bgColor: "#FFFFFF", textColor: "#0F172A",
-  },
-  {
-    title: "Instant Financial Snapshot",
-    description: "At a glance, see net worth, total assets, and outstanding liabilities for every family you advise — no digging required.",
-    image: "/assets/assets.png",
-    bgColor: "#FFFFFF", textColor: "#0F172A",
-  },
-  {
-    title: "Search & Filter Instantly",
-    description: "Find any client by name, username, or email in milliseconds. Your entire client roster, always at your fingertips.",
-    image: "/assets/security.png",
-    bgColor: "#FFFFFF", textColor: "#0F172A",
-  },
-];
 
 export default function ClientsListPage() {
   const [search, setSearch] = useState("");
@@ -64,131 +40,197 @@ export default function ClientsListPage() {
   return (
     <Layout>
       <div className="space-y-6">
-        <ScrollingFeatureShowcase
-          slides={CLIENTS_SLIDES}
-          height="440px"
-          ctaText="Add New Client"
-          ctaHref="/admin/clients/new"
-        />
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900">Clients</h1>
-            <p className="text-sm text-slate-500 mt-1">{clients?.length ?? 0} total clients</p>
+        
+        {/* Roster Workspace Header */}
+        <div className="bg-slate-900 rounded-3xl p-6 md:p-8 text-white relative overflow-hidden shadow-2xl shadow-slate-950/20 border border-slate-800">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-slate-800/40 via-transparent to-transparent pointer-events-none" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 bg-slate-800 text-amber-400 text-[10px] font-bold tracking-wider px-3 py-1 rounded-full border border-slate-700/50 uppercase">
+                <Users className="h-3.5 w-3.5" /> Portfolio Rosters
+              </div>
+              <h1 className="text-3xl font-black tracking-tight text-white mt-1">Client Roster Workspace</h1>
+              <p className="text-slate-400 text-sm max-w-xl">
+                Oversight and management of system-wide client profiles, contact metrics, and net worth parameters.
+              </p>
+            </div>
+            
+            <div className="flex flex-wrap gap-3 flex-shrink-0">
+              <Link href="/admin/clients/new">
+                <button className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs px-5 py-3.5 rounded-2xl flex items-center gap-2 shadow-lg shadow-amber-500/10 cursor-pointer transition-all duration-300">
+                  <PlusCircle className="h-4 w-4" />
+                  Onboard New Client
+                </button>
+              </Link>
+            </div>
           </div>
-          <Link href="/admin/clients/new">
-            <Button className="gap-2 shadow-lg shadow-primary/20 h-11">
-              <PlusCircle className="h-4 w-4" />
-              Add Client
-            </Button>
-          </Link>
         </div>
 
+        {/* Info & Metrics Counter row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Active Client Registry</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              {isLoading ? "Loading system rosters..." : `${filtered.length} client${filtered.length === 1 ? "" : "s"} found of ${clients?.length ?? 0} total registered`}
+            </p>
+          </div>
+        </div>
+
+        {/* Search bar */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
-            placeholder="Search by name, username, or email..."
+            placeholder="Search roster by client name, username, or contact email..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 focus:ring-primary/20 h-11 transition-all"
+            className="pl-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 shadow-sm rounded-2xl focus-visible:ring-1 focus-visible:ring-amber-500/30 focus-visible:border-amber-500 h-12 transition-all text-sm"
           />
         </div>
 
         {isLoading ? (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <Card key={i} className="glass-panel border-slate-200 bg-white/60">
-                <CardContent className="py-4">
-                  <div className="h-6 bg-slate-100 animate-pulse rounded w-48 mb-2" />
-                  <div className="h-4 bg-slate-100 animate-pulse rounded w-32" />
+              <Card key={i} className="border border-slate-200/60 bg-white/60 rounded-3xl">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4 animate-pulse">
+                    <div className="h-12 w-12 rounded-2xl bg-slate-100" />
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-slate-100 rounded w-1/4" />
+                      <div className="h-3 bg-slate-100 rounded w-1/3" />
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : filtered.length === 0 ? (
-          <Card className="glass-panel border-slate-200 bg-white/60">
+          <Card className="border border-slate-200 bg-white shadow-sm rounded-3xl">
             <CardContent className="py-12 flex flex-col items-center gap-3">
-              <div className="h-16 w-16 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100">
+              <div className="h-16 w-16 rounded-full bg-slate-50 flex items-center justify-center border border-slate-100 shadow-inner">
                 <Users className="h-8 w-8 text-slate-300" />
               </div>
-              <p className="font-medium text-slate-900">No clients found</p>
-              <p className="text-sm text-slate-500">
-                {search ? "Try a different search term" : "Add your first client to get started"}
+              <p className="font-extrabold text-xs text-slate-400 uppercase tracking-widest mt-2">No clients found</p>
+              <p className="text-xs text-slate-500 text-center max-w-sm mt-0.5">
+                {search ? "No matches correspond to the query. Try verifying spelling or parameters." : "No clients have been registered yet. Get started by adding a profile."}
               </p>
               {!search && (
                 <Link href="/admin/clients/new">
-                  <Button size="sm" className="mt-2 gap-2 shadow-md shadow-primary/10">
-                    <PlusCircle className="h-4 w-4" /> Add Client
+                  <Button size="sm" className="mt-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs px-4 h-9 rounded-xl flex items-center gap-2 transition-all shadow-sm">
+                    <PlusCircle className="h-4 w-4" /> Onboard Client
                   </Button>
                 </Link>
               )}
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {filtered.map((client) => (
-              <ClientRow key={client.id} client={client} onDelete={handleDelete} />
-            ))}
-          </div>
+          <Card className="border border-slate-200 bg-white shadow-sm rounded-3xl overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse text-left">
+                <thead>
+                  <tr className="border-b border-slate-100 bg-slate-50/50">
+                    <th className="p-4 pl-6 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Client details</th>
+                    <th className="p-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest text-right">Net Worth</th>
+                    <th className="p-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest text-right hidden sm:table-cell">Assets</th>
+                    <th className="p-4 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest text-right hidden sm:table-cell">Liabilities</th>
+                    <th className="p-4 pr-6 text-[10px] font-extrabold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filtered.map((client) => (
+                    <ClientTableRow key={client.id} client={client} onDelete={handleDelete} />
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
         )}
       </div>
     </Layout>
   );
 }
 
-function ClientRow({ client, onDelete }: { client: any; onDelete: (id: number, name: string) => void }) {
-  const { data: summary } = useGetClientSummary(client.id, {
+function ClientTableRow({ client, onDelete }: { client: any; onDelete: (id: number, name: string) => void }) {
+  const { data: summary, isLoading } = useGetClientSummary(client.id, {
     query: { enabled: !!client.id, queryKey: getGetClientSummaryQueryKey(client.id) } as any,
   });
 
   return (
-    <Card className="glass-panel border-slate-200/60 bg-white/60 hover:bg-white transition-all group overflow-hidden shadow-sm hover:shadow-lg hover:border-slate-300">
-      <CardContent className="p-0">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-5 gap-4">
-          <div className="flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold text-lg border border-slate-200 group-hover:bg-primary group-hover:text-white group-hover:border-primary transition-all duration-300">
-              {client.name.charAt(0)}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="font-bold text-slate-900 text-lg group-hover:text-primary transition-colors">{client.name}</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold mt-0.5">
-                @{client.username} {client.email ? `· ${client.email}` : ""}
-              </p>
-            </div>
+    <tr className="hover:bg-slate-50/50 transition-all duration-200 group">
+      {/* 1. Client Avatar and Info Block */}
+      <td className="p-4 pl-6 align-middle">
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="h-10 w-10 rounded-xl bg-slate-50 border border-slate-200/60 flex items-center justify-center text-slate-600 font-black text-sm group-hover:bg-slate-950 group-hover:text-amber-400 group-hover:border-slate-950 flex-shrink-0 transition-all duration-300">
+            {client.name.charAt(0)}
           </div>
-          
-          <div className="flex items-center justify-between sm:justify-end gap-8">
-            {summary && (
-              <div className="flex items-center gap-8 text-left sm:text-right">
-                <div>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Net Worth</p>
-                  <p className={`text-base font-black ${summary.netWorth >= 0 ? "text-slate-900" : "text-rose-500"}`}>
-                    {formatCurrency(summary.netWorth)}
-                  </p>
-                </div>
-                <div className="hidden md:block">
-                  <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Assets</p>
-                  <p className="text-base font-bold text-slate-600">{formatCurrency(summary.totalAssets)}</p>
-                </div>
-              </div>
-            )}
-            <div className="flex items-center gap-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
-                onClick={(e) => { e.preventDefault(); onDelete(client.id, client.name); }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-              <Link href={`/admin/clients/${client.id}`}>
-                <Button variant="outline" size="sm" className="gap-2 h-10 rounded-xl px-5 font-bold border-slate-200 text-slate-700 hover:bg-primary hover:text-white hover:border-primary transition-all shadow-sm">
-                  View <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-slate-800 group-hover:text-amber-600 transition-colors truncate" title={client.name}>
+              {client.name}
+            </p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-extrabold mt-0.5 truncate max-w-[240px]" title={client.email}>
+              @{client.username} {client.email ? `· ${client.email}` : ""}
+            </p>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </td>
+
+      {/* 2. Net Worth */}
+      <td className="p-4 text-right align-middle">
+        {isLoading ? (
+          <span className="text-xs text-slate-400">Loading...</span>
+        ) : summary ? (
+          <span className={`text-sm font-black tabular-nums ${summary.netWorth >= 0 ? "text-slate-900" : "text-rose-600"}`}>
+            {formatCurrency(summary.netWorth)}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        )}
+      </td>
+
+      {/* 3. Total Assets */}
+      <td className="p-4 text-right align-middle hidden sm:table-cell">
+        {isLoading ? (
+          <span className="text-xs text-slate-400">Loading...</span>
+        ) : summary ? (
+          <span className="text-sm font-bold text-slate-700 tabular-nums">
+            {formatCurrency(summary.totalAssets)}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        )}
+      </td>
+
+      {/* 4. Liabilities */}
+      <td className="p-4 text-right align-middle hidden sm:table-cell">
+        {isLoading ? (
+          <span className="text-xs text-slate-400">Loading...</span>
+        ) : summary ? (
+          <span className="text-sm font-bold text-rose-500 tabular-nums">
+            {formatCurrency(summary.totalLiabilities)}
+          </span>
+        ) : (
+          <span className="text-xs text-slate-400">—</span>
+        )}
+      </td>
+
+      {/* 5. Actions */}
+      <td className="p-4 pr-6 text-right align-middle">
+        <div className="flex items-center justify-end gap-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all cursor-pointer flex-shrink-0"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); onDelete(client.id, client.name); }}
+            title="Delete Client Portfolio"
+          >
+            <Trash2 className="h-4.5 w-4.5" />
+          </Button>
+          <Link href={`/admin/clients/${client.id}`}>
+            <Button variant="outline" size="sm" className="gap-1.5 h-9 rounded-xl px-4 font-black border-slate-200 text-slate-700 hover:bg-slate-950 hover:text-amber-400 hover:border-slate-950 transition-all shadow-sm cursor-pointer text-[11px] whitespace-nowrap">
+              Manage <ArrowRight className="h-3.5 w-3.5" />
+            </Button>
+          </Link>
+        </div>
+      </td>
+    </tr>
   );
 }
