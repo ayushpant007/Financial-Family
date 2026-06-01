@@ -1,0 +1,9 @@
+Scope: 2 of 9 workspace projects
+artifacts/wealth-mgmt dev$ vite --config vite.config.ts --host 0.0.0.0
+artifacts/api-server dev$ pnpm --filter @workspace/db run setup && tsx watch app-source/index.ts
+artifacts/api-server dev: 'pnpm' is not recognized as an internal or external command,
+artifacts/api-server dev: operable program or batch file.
+artifacts/api-server dev: Failed
+D:\Others\Financial-Family\Financial-Family\artifacts\api-server:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 dev: `pnpm --filter @workspace/db run setup && tsx watch app-source/index.ts`
+Exit status 1

@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils-format";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, IndianRupee, ArrowLeft, Sparkles, Compass, BarChart3, Landmark, RefreshCw, Shield, Coins, Loader2 } from "lucide-react";
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, IndianRupee, ArrowLeft, Sparkles, Compass, BarChart3, Landmark, RefreshCw, Shield, Coins, Loader2, Wallet } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FundAutocomplete } from "@/components/fund-autocomplete";
 import { StockAutocomplete } from "@/components/stock-autocomplete";
@@ -502,6 +502,20 @@ export default function ClientDetailPage() {
   const [viewHoldingsForType, setViewHoldingsForType] = useState<string | null>(null);
   const [assetCurrentPage, setAssetCurrentPage] = useState(1);
   const [liveValues, setLiveValues] = useState<Record<number, { current: number; invested: number }>>({});
+  const [activeMainTab, setActiveMainTab] = useState<"assets" | "liabilities">("assets");
+  const [mainAssetsPage, setMainAssetsPage] = useState(1);
+  const [mainLiabilitiesPage, setMainLiabilitiesPage] = useState(1);
+
+  useEffect(() => {
+    const handleSwitchTab = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (customEvent.detail === "assets" || customEvent.detail === "liabilities") {
+        setActiveMainTab(customEvent.detail);
+      }
+    };
+    window.addEventListener("switch-tab", handleSwitchTab);
+    return () => window.removeEventListener("switch-tab", handleSwitchTab);
+  }, []);
 
   const handleLiveValueResolved = useCallback((assetId: number, current: number, invested: number) => {
     setLiveValues(prev => {
@@ -1454,420 +1468,530 @@ export default function ClientDetailPage() {
           );
         })()}
 
+        {/* Premium Main Switcher Tabs (Assets vs Liabilities) */}
+        <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200/50 max-w-md mx-auto mb-8">
+          <button
+            onClick={() => setActiveMainTab("assets")}
+            className={cn(
+              "flex-1 py-3 text-sm font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer",
+              activeMainTab === "assets"
+                ? "bg-slate-900 text-white shadow-lg shadow-slate-955/10 animate-in fade-in zoom-in-95 duration-150"
+                : "text-slate-500 hover:text-slate-900 bg-transparent"
+            )}
+          >
+            <Wallet className="w-4 h-4" />
+            Assets
+            <span className={cn(
+              "ml-1.5 px-2 py-0.5 text-[10px] font-bold rounded-full transition-all duration-300",
+              activeMainTab === "assets" ? "bg-amber-500 text-slate-950" : "bg-slate-200 text-slate-600"
+            )}>
+              {assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0}
+            </span>
+          </button>
+          <button
+            onClick={() => setActiveMainTab("liabilities")}
+            className={cn(
+              "flex-1 py-3 text-sm font-black rounded-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer",
+              activeMainTab === "liabilities"
+                ? "bg-slate-900 text-white shadow-lg shadow-slate-955/10 animate-in fade-in zoom-in-95 duration-150"
+                : "text-slate-500 hover:text-slate-900 bg-transparent"
+            )}
+          >
+            <TrendingDown className="w-4 h-4" />
+            Liabilities
+            <span className={cn(
+              "ml-1.5 px-2 py-0.5 text-[10px] font-bold rounded-full transition-all duration-300",
+              activeMainTab === "liabilities" ? "bg-rose-500 text-white" : "bg-slate-200 text-slate-600"
+            )}>
+              {liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0}
+            </span>
+          </button>
+        </div>
+
         <div className="grid grid-cols-1 gap-8">
-          {/* Assets Section */}
-          <div data-reveal data-reveal-delay="200">
-            {/* ── Section heading ── */}
-            <div id="assets-section" className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">
-                  {selectedMemberId === null ? "My Assets" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Assets`}
-                  <span className="ml-2 text-slate-400 text-sm font-medium">
-                    ({assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})
-                  </span>
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">Browse by asset class</p>
+          {activeMainTab === "assets" ? (
+            /* Assets Section */
+            <div data-reveal data-reveal-delay="200" className="space-y-6 animate-in fade-in duration-300">
+              {/* ── Section heading ── */}
+              <div id="assets-section" className="flex items-center justify-between mb-5 scroll-mt-20">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-900">
+                    {selectedMemberId === null ? "My Assets" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Assets`}
+                    <span className="ml-2 text-slate-400 text-sm font-medium">
+                      ({assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})
+                    </span>
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-0.5">Browse by asset class</p>
+                </div>
+                <Button size="sm" className="gap-2 shadow-lg shadow-primary/20" onClick={() => { setAssetDialog({ type: "mutual_fund", data: {} }); }}>
+                  <Plus className="h-4 w-4" /> Add Asset
+                </Button>
               </div>
-              <Button size="sm" className="gap-2 shadow-lg shadow-primary/20" onClick={() => { setAssetDialog({ type: "mutual_fund", data: {} }); }}>
-                <Plus className="h-4 w-4" /> Add Asset
-              </Button>
-            </div>
 
-            {(() => {
-              const filteredAssets = assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
+              {(() => {
+                const filteredAssets = assets?.filter(a => (a.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
 
-              const GROUP_META: Record<string, { label: string; plural: string; gradient: string; badgeCls: string; color: string; icon: string }> = {
-                mutual_fund:       { label: "Mutual Fund",        plural: "Mutual Funds",       gradient: "from-amber-400 to-yellow-300",  badgeCls: "bg-amber-50 text-amber-700 border-amber-200",    color: "#f59e0b", icon: "📈" },
-                stock:             { label: "Stock",              plural: "Stocks",             gradient: "from-emerald-500 to-teal-400",  badgeCls: "bg-emerald-50 text-emerald-700 border-emerald-200", color: "#10b981", icon: "📊" },
-                fixed_deposit:     { label: "Fixed Deposit",     plural: "Fixed Deposits",     gradient: "from-blue-500 to-indigo-400",   badgeCls: "bg-blue-50 text-blue-700 border-blue-200",       color: "#3b82f6", icon: "🏦" },
-                recurring_deposit: { label: "Recurring Deposit", plural: "Recurring Deposits", gradient: "from-violet-500 to-purple-400", badgeCls: "bg-violet-50 text-violet-700 border-violet-200", color: "#8b5cf6", icon: "🔄" },
-                provident_fund:    { label: "PF / PPF",          plural: "Provident Fund",     gradient: "from-orange-500 to-rose-400",   badgeCls: "bg-orange-50 text-orange-700 border-orange-200", color: "#f97316", icon: "🛡️" },
-                cash_bank:         { label: "Cash & Bank",       plural: "Cash & Bank",        gradient: "from-slate-500 to-slate-400",   badgeCls: "bg-slate-100 text-slate-600 border-slate-200",   color: "#64748b", icon: "💵" },
-              };
+                const GROUP_META: Record<string, { label: string; plural: string; gradient: string; badgeCls: string; color: string; icon: string }> = {
+                  mutual_fund:       { label: "Mutual Fund",        plural: "Mutual Funds",       gradient: "from-amber-400 to-yellow-300",  badgeCls: "bg-amber-50 text-amber-700 border-amber-200",    color: "#f59e0b", icon: "📈" },
+                  stock:             { label: "Stock",              plural: "Stocks",             gradient: "from-emerald-500 to-teal-400",  badgeCls: "bg-emerald-50 text-emerald-700 border-emerald-200", color: "#10b981", icon: "📊" },
+                  fixed_deposit:     { label: "Fixed Deposit",     plural: "Fixed Deposits",     gradient: "from-blue-500 to-indigo-400",   badgeCls: "bg-blue-50 text-blue-700 border-blue-200",       color: "#3b82f6", icon: "🏦" },
+                  recurring_deposit: { label: "Recurring Deposit", plural: "Recurring Deposits", gradient: "from-violet-500 to-purple-400", badgeCls: "bg-violet-50 text-violet-700 border-violet-200", color: "#8b5cf6", icon: "🔄" },
+                  provident_fund:    { label: "PF / PPF",          plural: "Provident Fund",     gradient: "from-orange-500 to-rose-400",   badgeCls: "bg-orange-50 text-orange-700 border-orange-200", color: "#f97316", icon: "🛡️" },
+                  cash_bank:         { label: "Cash & Bank",       plural: "Cash & Bank",        gradient: "from-slate-500 to-slate-400",   badgeCls: "bg-slate-100 text-slate-600 border-slate-200",   color: "#64748b", icon: "💵" },
+                };
 
-              // Build only groups that exist
-              const groups = ASSET_TYPES
-                .map(t => ({
-                  typeKey: t.value,
-                  meta: GROUP_META[t.value] ?? { label: t.label, plural: t.label, gradient: "from-slate-400 to-slate-300", badgeCls: "bg-slate-100 text-slate-600 border-slate-200", color: "#94a3b8", icon: "💼" },
-                  items: filteredAssets.filter(a => a.assetType === t.value),
-                }))
-                .filter(g => g.items.length > 0);
+                // Build only groups that exist
+                const groups = ASSET_TYPES
+                  .map(t => ({
+                    typeKey: t.value,
+                    meta: GROUP_META[t.value] ?? { label: t.label, plural: t.label, gradient: "from-slate-400 to-slate-300", badgeCls: "bg-slate-100 text-slate-600 border-slate-200", color: "#94a3b8", icon: "💼" },
+                    items: filteredAssets.filter(a => a.assetType === t.value),
+                  }))
+                  .filter(g => g.items.length > 0);
 
-              if (groups.length === 0) return (
-                <Card className="border-slate-200 border-dashed bg-slate-50/50 rounded-2xl">
-                  <CardContent className="py-16 text-center">
-                    <div className="mx-auto h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
-                      <Plus className="h-6 w-6 text-slate-400" />
-                    </div>
-                    <p className="text-slate-500 font-semibold">No assets yet</p>
-                    <p className="text-slate-400 text-sm mt-1">Add your first asset to get started</p>
-                  </CardContent>
-                </Card>
-              );
-
-              // Clamp activeAssetTab to valid range
-              const safeTab = Math.min(activeAssetTab, groups.length - 1);
-              const activeGroup = groups[safeTab];
-
-              const circularNavItems = groups.map((g, index) => ({
-                name: g.meta.label,
-                icon: ASSET_ICONS[g.typeKey] ?? Compass,
-                href: "#",
-                onClick: () => {
-                  setActiveAssetTab(index);
-                  setViewHoldingsForType(null);
-                  setAssetCurrentPage(1);
-                },
-              }));
-
-              const formatValue = (k: string, v: unknown) => {
-                const str = String(v);
-                if (k === "price" || k === "amount") return formatCurrency(parseFloat(str) || 0);
-                return str;
-              };
-              const labelMap: Record<string, string> = {
-                date: "Purchase Date", price: "Buy Price", units: "Units",
-                accountType: "Account", age: "Age",
-              };
-              const skipKeys = ["amount","basicSalary","dearnessAllowance","employeeContributionPercent","employerContributionPercent","interestRate","tenureYears","currentBalance","salaryGrowth","includeEPS","totalContribution","startDate","maturityDate","monthlyInvestment","investmentAmount","institutionName","payoutType","assetName","investmentMethod"];
-
-              return (
-                <div className="space-y-6">
-                  {/* ── Premium Asset Navigation Trigger ── */}
-                  <div className="flex items-center justify-between bg-slate-900/95 backdrop-blur-md border border-amber-500/25 p-4 rounded-2xl shadow-xl shadow-amber-500/5">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 text-amber-500">
-                        <Compass className="w-5 h-5 animate-[spin_12s_linear_infinite]" />
+                if (groups.length === 0) return (
+                  <Card className="border-slate-200 border-dashed bg-slate-50/50 rounded-2xl">
+                    <CardContent className="py-16 text-center">
+                      <div className="mx-auto h-14 w-14 rounded-2xl bg-slate-100 flex items-center justify-center mb-4">
+                        <Plus className="h-6 w-6 text-slate-400" />
                       </div>
-                      <div>
-                        <p className="text-[10px] uppercase tracking-widest text-amber-500/80 font-bold">Currently Viewing</p>
-                        <p className="text-sm font-extrabold text-slate-100">{activeGroup.meta.label}</p>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={() => setIsCircularNavOpen(true)}
-                      className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 border border-amber-400/30 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-amber-500/20 cursor-pointer"
-                    >
-                      <Compass className="w-4 h-4" />
-                      Switch Asset Class
-                    </Button>
-                  </div>
-
-                  <CircularNavigation
-                    isOpen={isCircularNavOpen}
-                    toggleMenu={() => setIsCircularNavOpen(!isCircularNavOpen)}
-                    navItems={circularNavItems}
-                  />
-
-                  {/* Detailed Summary Dashboard */}
-                  <Card className="overflow-hidden border border-slate-200 bg-white shadow-md rounded-3xl">
-                    <div className={`h-1.5 w-full bg-gradient-to-r ${activeGroup.meta.gradient}`} />
-                    <CardContent className="p-6 space-y-6">
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div>
-                          <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                            <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
-                            <span>{activeGroup.meta.label} Portfolio Summary</span>
-                          </h3>
-                          <p className="text-xs text-slate-500 mt-1">Unified performance metrics for all {activeGroup.items.length} dynamic asset holdings</p>
-                        </div>
-                        
-                        <Button
-                          onClick={() => setViewHoldingsForType(activeGroup.typeKey)}
-                          className={`bg-gradient-to-r ${activeGroup.meta.gradient} hover:opacity-90 text-slate-950 font-black text-xs px-5 py-3 rounded-2xl flex items-center gap-2 shadow-lg shadow-amber-500/10 cursor-pointer`}
-                        >
-                          Explore Holdings & Visualisation
-                          <TrendingUp className="h-4 w-4" />
-                        </Button>
-                      </div>
-
-                      {/* Stats Grid */}
-                      {(() => {
-                        const totals = activeGroup.items.reduce((acc, asset) => {
-                          const live = liveValues[asset.id];
-                          const vals = live ? live : getAssetCurrentAndInvested(asset);
-                          return {
-                            invested: acc.invested + vals.invested,
-                            current: acc.current + vals.current,
-                          };
-                        }, { invested: 0, current: 0 });
-
-                        const totalGain = totals.current - totals.invested;
-                        const gainPercentage = totals.invested > 0 ? (totalGain / totals.invested) * 100 : 0;
-                        const isPositive = totalGain >= 0;
-
-                        return (
-                          <div className="space-y-6">
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                              <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4.5">
-                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Total Invested Amount</p>
-                                <p className="text-2xl font-black text-slate-900 mt-1.5 tabular-nums">{formatCurrency(totals.invested)}</p>
-                                <p className="text-[10px] text-slate-400 mt-1">Cost value of holdings</p>
-                              </div>
-
-                              <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4.5">
-                                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Current Market Value</p>
-                                <p className="text-2xl font-black text-slate-900 mt-1.5 tabular-nums">{formatCurrency(totals.current)}</p>
-                                <p className="text-[10px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                  Live Valued
-                                </p>
-                              </div>
-
-                              <div className={`border rounded-2xl p-4.5 ${isPositive ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-rose-50/30 border-rose-100/50'}`}>
-                                <p className={`text-[10px] font-extrabold uppercase tracking-widest ${isPositive ? 'text-emerald-700/80' : 'text-rose-700/80'}`}>Net Portfolio Returns</p>
-                                <p className={`text-2xl font-black mt-1.5 tabular-nums flex items-center gap-1.5 ${isPositive ? 'text-emerald-700' : 'text-rose-700'}`}>
-                                  {isPositive ? "+" : ""}{formatCurrency(totalGain)}
-                                </p>
-                                <p className={`text-xs font-black mt-1 flex items-center gap-1 ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
-                                  {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                                  {isPositive ? "+" : ""}{gainPercentage.toFixed(2)}% Growth
-                                </p>
-                              </div>
-                            </div>
-
-                            {/* Visual Breakdown Section */}
-                            <div className="space-y-3.5 border-t border-slate-100 pt-5">
-                              <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Asset Weight &amp; Distribution Visualisation</h4>
-                              <div className="space-y-4">
-                                {activeGroup.items.map((item) => (
-                                  <AssetDistributionCard
-                                    key={item.id}
-                                    item={item}
-                                    totals={totals}
-                                    onResolved={handleLiveValueResolved}
-                                    activeGroup={activeGroup}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
+                      <p className="text-slate-500 font-semibold">No assets yet</p>
+                      <p className="text-slate-400 text-sm mt-1">Add your first asset to get started</p>
                     </CardContent>
                   </Card>
-                </div>
-              );
-            })()}
-          </div>
+                );
 
-          <hr className="border-t border-slate-200" />
+                // Clamp activeAssetTab to valid range
+                const safeTab = Math.min(activeAssetTab, groups.length - 1);
+                const activeGroup = groups[safeTab];
 
+                const circularNavItems = groups.map((g, index) => ({
+                  name: g.meta.label,
+                  icon: ASSET_ICONS[g.typeKey] ?? Compass,
+                  href: "#",
+                  onClick: () => {
+                    setActiveAssetTab(index);
+                    setViewHoldingsForType(null);
+                    setAssetCurrentPage(1);
+                    setMainAssetsPage(1);
+                  },
+                }));
 
-
-
-
-          {/* Liabilities Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-slate-900">
-                {selectedMemberId === null ? "My Liabilities" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Liabilities`} 
-                <span className="ml-2 text-slate-400 text-sm font-medium">({liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})</span>
-              </h2>
-              <Button size="sm" variant="destructive" className="gap-2 shadow-lg shadow-rose-500/20" onClick={() => setLiabilityDialog({ 
-                  liabilityType: "Loans", 
-                  loanType: "home_loan", 
-                  lenderName: "", 
-                  totalLoanAmount: "", 
-                  outstandingAmount: "", 
-                  interestRate: "", 
-                  emi: "", 
-                  startDate: "", 
-                  endDate: "", 
-                  interestType: "Reducing", 
-                  subType: "", 
-                  tenure: "", 
-                  income: "", 
-                  tds: "", 
-                  advanceTax: "", 
-                  standardDeduction: "75000", 
-                  insuranceCategory: "", 
-                  insuranceSubtype: "", 
-                  propertyValue: "", 
-                  insuranceRate: "", 
-                  premium: "", 
-                  tenureYears: "", 
-                  baseRate: "", 
-                  addOns: "", 
-                  discounts: "", 
-                  householdCategory: "",
-                  householdAmount: "",
-                  rent: "", maintenance: "", taxes: "",
-                  electricity: "", water: "", gas: "", internet: "",
-                  groceries: "",
-                  fees: "", books: "", academicCosts: "",
-                  maidSalary: "", cookSalary: "", serviceCosts: "",
-                  medicalBills: "", medicines: "", miscCosts: ""
-                })}>
-                  <Plus className="h-4 w-4" /> Add Liability
-                </Button>
-            </div>
-            {(() => {
-              const filteredLiabilities = liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
-              if (filteredLiabilities.length === 0) return <Card className="glass-panel border-slate-200 border-dashed bg-slate-50/50"><CardContent className="py-8 text-center text-slate-400 text-sm">No liabilities yet</CardContent></Card>;
-              
-              return filteredLiabilities.map((liability) => (
-                <Card key={liability.id} className="glass-panel border-slate-100 bg-white hover:bg-slate-50 transition-all shadow-sm">
-                  <CardContent className="p-3 sm:p-6 py-4">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <Badge variant="destructive" className="text-[10px] mb-2 bg-rose-50 text-rose-600 border-rose-100 uppercase tracking-wider">
-                          {(() => {
-                            const parts = liability.notes?.split("|") ?? [];
-                            const type = parts[0];
-                            const subType = parts[parts.length - 1];
-                            const hasModel = parts.length > 1 && subType !== "Flat";
-                            
-                            if (type === "Loans") return LOAN_LABELS[liability.loanType];
-                            if (type === "Bills" && subType && subType !== "Bills") return `Bills - ${subType}`;
-                            if (type === "Insurance Dues") {
-                              const cat = parts.find(p => p.startsWith("Cat:"))?.split(":")[1];
-                              const sub = parts.find(p => p.startsWith("Sub:"))?.split(":")[1];
-                              return sub ? `${cat} - ${sub}` : (cat ?? "Insurance");
-                            }
-                            if (hasModel) return `${type} - ${subType}`;
-                            return type || LOAN_LABELS[liability.loanType];
-                          })()}
-                        </Badge>
-                        <p className="text-base font-bold text-slate-900">{liability.lenderName}</p>
-                        <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                          {(() => {
-                            const parts = liability.notes?.split("|") ?? [];
-                            const type = parts[0];
-                            if (type === "Taxes") {
-                              const inc = parts.find(p => p.startsWith("Income:"))?.split(":")[1] ?? "0";
-                              const tds = parts.find(p => p.startsWith("TDS:"))?.split(":")[1] ?? "0";
-                              const adv = parts.find(p => p.startsWith("Advance:"))?.split(":")[1] ?? "0";
-                              return (
-                                <>
-                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Net Tax Payable: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Outstanding: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
-                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Annual Income: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(inc))}</span></p>
-                                  <p className="flex justify-between border-b border-slate-200 py-0.5">TDS Paid: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(tds))}</span></p>
-                                  {adv !== "0" && <p className="flex justify-between border-b border-slate-200 py-0.5">Advance Tax: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(adv))}</span></p>}
-                                  {liability.startDate && <p className="flex justify-between last:border-0 py-0.5">Due Date: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
-                                </>
-                              );
-                            }
-                            if (type === "Bills") {
-                              return (
-                                <>
-                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Original Bill: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Current Outstanding: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
-                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Penalty Rate: <span className="text-slate-700 font-medium">{liability.interestRate}%</span></p>
-                                  {liability.startDate && <p className="flex justify-between last:border-0 py-0.5">Due Date: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
-                                </>
-                              );
-                            }
-                            if (type === "Insurance Dues") {
-                              const cat = parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "";
-                              const sub = parts.find(p => p.startsWith("Sub:"))?.split(":")[1];
-                              const prem = parts.find(p => p.startsWith("Premium:"))?.split(":")[1];
-                              const yrs = parts.find(p => p.startsWith("Years:"))?.split(":")[1];
-                              return (
-                                <>
-                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Total Premium: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                  <p className="flex justify-between border-b border-slate-200 py-0.5">Amount Due: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
-                                  {prem && <p className="flex justify-between border-b border-slate-200 py-0.5">Annual Premium: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(prem))}</span></p>}
-                                  {yrs && <p className="flex justify-between border-b border-slate-200 py-0.5">Tenure: <span className="text-slate-700 font-medium">{yrs} yrs</span></p>}
-                                  {sub && <p className="flex justify-between border-b border-slate-200 py-0.5">Type: <span className="text-slate-700 font-medium">{sub}</span></p>}
-                                  {liability.startDate && <p className="flex justify-between last:border-0 py-0.5">Start: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
-                                </>
-                              );
-                            }
-                             if (type === "Household Obligations") {
-                               const cat = parts.find(p => p.startsWith("Cat:"))?.split(":")[1];
-                               return (
-                                 <>
-                                   <p className="flex justify-between border-b border-slate-200 py-0.5">Monthly Amount: <span className="text-slate-900 font-bold">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                   {cat && <p className="flex justify-between border-b border-slate-200 py-0.5">Category: <span className="text-slate-700 font-medium">{cat}</span></p>}
-                                   {liability.startDate && <p className="flex justify-between border-b border-slate-200 py-0.5">Start Date: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
-                                   {liability.endDate && <p className="flex justify-between last:border-0 py-0.5">End Date: <span className="text-slate-500">{formatDate(liability.endDate)}</span></p>}
-                                 </>
-                               );
-                             }
-                            return (
-                              <>
-                                <p className="flex justify-between border-b border-slate-200 py-0.5">Total: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
-                                <p className="flex justify-between border-b border-slate-200 py-0.5">Outstanding: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
-                                <p className="flex justify-between border-b border-slate-200 py-0.5">Interest: <span className="text-slate-700 font-medium">{liability.interestRate}%</span></p>
-                                <p className="flex justify-between border-b border-slate-200 py-0.5">EMI: <span className="text-slate-700 font-medium">{formatCurrency(liability.emi)}</span></p>
-                                {liability.startDate && <p className="flex justify-between border-b border-slate-200 py-0.5">Start: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
-                                {liability.endDate && <p className="flex justify-between last:border-0 py-0.5">End: <span className="text-slate-500">{formatDate(liability.endDate)}</span></p>}
-                              </>
-                            );
-                          })()}
+                return (
+                  <div className="space-y-6">
+                    {/* ── Premium Asset Navigation Trigger ── */}
+                    <div className="flex items-center justify-between bg-slate-900/95 backdrop-blur-md border border-amber-500/25 p-4 rounded-2xl shadow-xl shadow-amber-500/5">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-amber-500/10 p-2.5 rounded-xl border border-amber-500/20 text-amber-500">
+                          <Compass className="w-5 h-5 animate-[spin_12s_linear_infinite]" />
                         </div>
-                        {(!liability.notes?.startsWith("Taxes") && !liability.notes?.startsWith("Bills") && !liability.notes?.startsWith("Insurance Dues") && (liability.loanType === "home_loan" || liability.loanType === "car_loan" || liability.loanType === "personal_loan" || liability.loanType === "business_loan" || liability.loanType === "education_loan" || liability.notes?.startsWith("Loans") || liability.notes?.startsWith("Credit Cards & BNPL") || liability.notes?.startsWith("EMIs"))) && (
-                          <LoanValuation liability={liability} />
-                        )}
+                        <div>
+                          <p className="text-[10px] uppercase tracking-widest text-amber-500/80 font-bold">Currently Viewing</p>
+                          <p className="text-sm font-extrabold text-slate-100">{activeGroup.meta.label}</p>
+                        </div>
                       </div>
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100" onClick={() => {
-                          const parts = liability.notes?.split("|") ?? [];
-                          const type = parts[0];
-                          setLiabilityDialog({
-                            editId: liability.id,
-                            liabilityType: type,
-                            loanType: liability.loanType,
-                            lenderName: liability.lenderName,
-                            totalLoanAmount: String(liability.totalLoanAmount),
-                            outstandingAmount: String(liability.outstandingAmount),
-                            interestRate: String(liability.interestRate),
-                            emi: String(liability.emi),
-                            startDate: liability.startDate?.split("T")[0] ?? "",
-                            endDate: liability.endDate?.split("T")[0] ?? "",
-                            interestType: parts.includes("Flat") ? "Flat" : "Reducing",
-                            subType: parts[parts.length - 1] === "Flat" ? "" : parts[parts.length - 1],
-                            tenure: "", 
-                            income: parts.find(p => p.startsWith("Income:"))?.split(":")[1] ?? "",
-                            tds: parts.find(p => p.startsWith("TDS:"))?.split(":")[1] ?? "",
-                            advanceTax: parts.find(p => p.startsWith("Advance:"))?.split(":")[1] ?? "",
-                            standardDeduction: parts.find(p => p.startsWith("StdDed:"))?.split(":")[1] ?? "75000",
-                            insuranceCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
-                            insuranceSubtype: parts.find(p => p.startsWith("Sub:"))?.split(":")[1] ?? "",
-                            propertyValue: "",
-                            insuranceRate: String(liability.interestRate),
-                            premium: parts.find(p => p.startsWith("Premium:"))?.split(":")[1] ?? "",
-                            tenureYears: parts.find(p => p.startsWith("Years:"))?.split(":")[1] ?? "",
-                            baseRate: parts.find(p => p.startsWith("Base:"))?.split(":")[1] ?? "",
-                            addOns: parts.find(p => p.startsWith("Addons:"))?.split(":")[1] ?? "",
-                            discounts: parts.find(p => p.startsWith("Disc:"))?.split(":")[1] ?? "",
-                            householdCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
-                            householdAmount: parts.find(p => p.startsWith("Amt:"))?.split(":")[1] ?? "",
-                            rent: parts.find(p => p.startsWith("Rent:"))?.split(":")[1] ?? "",
-                            maintenance: parts.find(p => p.startsWith("Maint:"))?.split(":")[1] ?? "",
-                            taxes: parts.find(p => p.startsWith("Taxes:"))?.split(":")[1] ?? "",
-                            electricity: parts.find(p => p.startsWith("Elec:"))?.split(":")[1] ?? "",
-                            water: parts.find(p => p.startsWith("Water:"))?.split(":")[1] ?? "",
-                            gas: parts.find(p => p.startsWith("Gas:"))?.split(":")[1] ?? "",
-                            internet: parts.find(p => p.startsWith("Net:"))?.split(":")[1] ?? "",
-                            groceries: parts.find(p => p.startsWith("Groceries:"))?.split(":")[1] ?? "",
-                            fees: parts.find(p => p.startsWith("Fees:"))?.split(":")[1] ?? "",
-                            books: parts.find(p => p.startsWith("Books:"))?.split(":")[1] ?? "",
-                            academicCosts: parts.find(p => p.startsWith("Acad:"))?.split(":")[1] ?? "",
-                            maidSalary: parts.find(p => p.startsWith("Maid:"))?.split(":")[1] ?? "",
-                            cookSalary: parts.find(p => p.startsWith("Cook:"))?.split(":")[1] ?? "",
-                            serviceCosts: parts.find(p => p.startsWith("Serv:"))?.split(":")[1] ?? "",
-                            medicalBills: parts.find(p => p.startsWith("MedB:"))?.split(":")[1] ?? "",
-                            medicines: parts.find(p => p.startsWith("MedI:"))?.split(":")[1] ?? "",
-                            miscCosts: parts.find(p => p.startsWith("Misc:"))?.split(":")[1] ?? "",
-                          });
-                        }}>
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => { if(confirm("Delete liability?")) deleteLiability.mutateAsync({ clientId: clientId!, liabilityId: liability.id }).then(invalidate); }}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
+
+                      <Button
+                        onClick={() => setIsCircularNavOpen(true)}
+                        className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-955 font-black text-xs px-4 py-2.5 rounded-xl flex items-center gap-2 border border-amber-400/30 hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg shadow-amber-500/20 cursor-pointer border-transparent"
+                      >
+                        <Compass className="w-4 h-4" />
+                        Switch Asset Class
+                      </Button>
                     </div>
-                  </CardContent>
-                </Card>
-              ));
-            })()}
-          </div>
+
+                    <CircularNavigation
+                      isOpen={isCircularNavOpen}
+                      toggleMenu={() => setIsCircularNavOpen(!isCircularNavOpen)}
+                      navItems={circularNavItems}
+                    />
+
+                    {/* Detailed Summary Dashboard */}
+                    <Card className="overflow-hidden border border-slate-200 bg-white shadow-md rounded-3xl">
+                      <div className={`h-1.5 w-full bg-gradient-to-r ${activeGroup.meta.gradient}`} />
+                      <CardContent className="p-6 space-y-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div>
+                            <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                              <Sparkles className="h-5 w-5 text-amber-500 animate-pulse" />
+                              <span>{activeGroup.meta.label} Portfolio Summary</span>
+                            </h3>
+                            <p className="text-xs text-slate-500 mt-1">Unified performance metrics for all {activeGroup.items.length} dynamic asset holdings</p>
+                          </div>
+                          
+                          <Button
+                            onClick={() => setViewHoldingsForType(activeGroup.typeKey)}
+                            className={`bg-gradient-to-r ${activeGroup.meta.gradient} hover:opacity-90 text-slate-955 font-black text-xs px-5 py-3 rounded-2xl flex items-center gap-2 shadow-lg shadow-amber-500/10 cursor-pointer border-transparent`}
+                          >
+                            Explore Holdings & Visualisation
+                            <TrendingUp className="h-4 w-4" />
+                          </Button>
+                        </div>
+
+                        {/* Stats Grid */}
+                        {(() => {
+                          const totals = activeGroup.items.reduce((acc, asset) => {
+                            const live = liveValues[asset.id];
+                            const vals = live ? live : getAssetCurrentAndInvested(asset);
+                            return {
+                              invested: acc.invested + vals.invested,
+                              current: acc.current + vals.current,
+                            };
+                          }, { invested: 0, current: 0 });
+
+                          const totalGain = totals.current - totals.invested;
+                          const gainPercentage = totals.invested > 0 ? (totalGain / totals.invested) * 100 : 0;
+                          const isPositive = totalGain >= 0;
+
+                          return (
+                            <div className="space-y-6">
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4.5">
+                                  <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Total Invested Amount</p>
+                                  <p className="text-2xl font-black text-slate-900 mt-1.5 tabular-nums">{formatCurrency(totals.invested)}</p>
+                                  <p className="text-[10px] text-slate-400 mt-1">Cost value of holdings</p>
+                                </div>
+
+                                <div className="bg-slate-50/50 border border-slate-100 rounded-2xl p-4.5">
+                                  <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-widest">Current Market Value</p>
+                                  <p className="text-2xl font-black text-slate-900 mt-1.5 tabular-nums">{formatCurrency(totals.current)}</p>
+                                  <p className="text-[10px] text-emerald-600 font-semibold mt-1 flex items-center gap-1">
+                                    <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                    Live Valued
+                                  </p>
+                                </div>
+
+                                <div className={`border rounded-2xl p-4.5 ${isPositive ? 'bg-emerald-50/30 border-emerald-100/50' : 'bg-rose-50/30 border-rose-100/50'}`}>
+                                  <p className={`text-[10px] font-extrabold uppercase tracking-widest ${isPositive ? 'text-emerald-700/80' : 'text-rose-700/80'}`}>Net Portfolio Returns</p>
+                                  <p className={`text-2xl font-black mt-1.5 tabular-nums flex items-center gap-1.5 ${isPositive ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                    {isPositive ? "+" : ""}{formatCurrency(totalGain)}
+                                  </p>
+                                  <p className={`text-xs font-black mt-1 flex items-center gap-1 ${isPositive ? 'text-emerald-600' : 'text-rose-600'}`}>
+                                    {isPositive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                                    {isPositive ? "+" : ""}{gainPercentage.toFixed(2)}% Growth
+                                  </p>
+                                </div>
+                              </div>
+
+                              {/* Visual Breakdown Section */}
+                              {(() => {
+                                const sortedItems = [...activeGroup.items].sort((a, b) => b.id - a.id);
+                                const itemsPerPage = 10;
+                                const totalPages = Math.max(1, Math.ceil(sortedItems.length / itemsPerPage));
+                                const activePage = Math.min(mainAssetsPage, totalPages);
+                                const paginatedItems = sortedItems.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+
+                                return (
+                                  <div className="space-y-3.5 border-t border-slate-100 pt-5">
+                                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-400">Asset Weight &amp; Distribution Visualisation</h4>
+                                    <div className="space-y-4">
+                                      {paginatedItems.map((item) => (
+                                        <AssetDistributionCard
+                                          key={item.id}
+                                          item={item}
+                                          totals={totals}
+                                          onResolved={handleLiveValueResolved}
+                                          activeGroup={activeGroup}
+                                        />
+                                      ))}
+                                    </div>
+
+                                    {/* Pagination footer for Assets */}
+                                    {totalPages > 1 && (
+                                      <div className="flex items-center justify-between border-t border-slate-100 pt-5 mt-4">
+                                        <p className="text-xs text-slate-500">
+                                          Showing <span className="font-bold text-slate-900">{(activePage - 1) * itemsPerPage + 1}</span> to{" "}
+                                          <span className="font-bold text-slate-900">{Math.min(activePage * itemsPerPage, sortedItems.length)}</span> of{" "}
+                                          <span className="font-bold text-slate-900">{sortedItems.length}</span> entries
+                                        </p>
+                                        <div className="flex gap-2">
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={activePage === 1}
+                                            onClick={() => setMainAssetsPage(activePage - 1)}
+                                            className="rounded-xl border-slate-200"
+                                          >
+                                            Previous
+                                          </Button>
+                                          <Button
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={activePage === totalPages}
+                                            onClick={() => setMainAssetsPage(activePage + 1)}
+                                            className="rounded-xl border-slate-200"
+                                          >
+                                            Next
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          );
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            /* Liabilities Section */
+            <div className="space-y-4 animate-in fade-in duration-300">
+              <div id="liabilities-section" className="flex items-center justify-between scroll-mt-20">
+                <h2 className="text-xl font-bold text-slate-900">
+                  {selectedMemberId === null ? "My Liabilities" : `${familyMembers?.find(m => m.id === selectedMemberId)?.name}'s Liabilities`} 
+                  <span className="ml-2 text-slate-400 text-sm font-medium">({liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)).length ?? 0})</span>
+                </h2>
+                <Button size="sm" variant="destructive" className="gap-2 shadow-lg shadow-rose-500/20" onClick={() => setLiabilityDialog({ 
+                    liabilityType: "Loans", 
+                    loanType: "home_loan", 
+                    lenderName: "", 
+                    totalLoanAmount: "", 
+                    outstandingAmount: "", 
+                    interestRate: "", 
+                    emi: "", 
+                    startDate: "", 
+                    endDate: "", 
+                    interestType: "Reducing", 
+                    subType: "", 
+                    tenure: "", 
+                    income: "", 
+                    tds: "", 
+                    advanceTax: "", 
+                    standardDeduction: "75000", 
+                    insuranceCategory: "", 
+                    insuranceSubtype: "", 
+                    propertyValue: "", 
+                    insuranceRate: "", 
+                    premium: "", 
+                    tenureYears: "", 
+                    baseRate: "", 
+                    addOns: "", 
+                    discounts: "", 
+                    householdCategory: "",
+                    householdAmount: "",
+                    rent: "", maintenance: "", taxes: "",
+                    electricity: "", water: "", gas: "", internet: "",
+                    groceries: "",
+                    fees: "", books: "", academicCosts: "",
+                    maidSalary: "", cookSalary: "", serviceCosts: "",
+                    medicalBills: "", medicines: "", miscCosts: ""
+                  })}>
+                    <Plus className="h-4 w-4" /> Add Liability
+                  </Button>
+              </div>
+              {(() => {
+                const filteredLiabilities = liabilities?.filter(l => (l.familyMemberId ?? null) === (selectedMemberId ?? null)) ?? [];
+                const sortedLiabilities = [...filteredLiabilities].sort((a, b) => b.id - a.id);
+                const itemsPerPage = 10;
+                const totalLiabilitiesPages = Math.max(1, Math.ceil(sortedLiabilities.length / itemsPerPage));
+                const activePage = Math.min(mainLiabilitiesPage, totalLiabilitiesPages);
+                const paginatedLiabilities = sortedLiabilities.slice((activePage - 1) * itemsPerPage, activePage * itemsPerPage);
+
+                if (paginatedLiabilities.length === 0) {
+                  return <Card className="glass-panel border-slate-200 border-dashed bg-slate-50/50"><CardContent className="py-8 text-center text-slate-400 text-sm font-semibold italic">No liabilities recorded for this family member</CardContent></Card>;
+                }
+                
+                return (
+                  <div className="space-y-4">
+                    {paginatedLiabilities.map((liability) => (
+                      <Card key={liability.id} className="glass-panel border-slate-100 bg-white hover:bg-slate-50 hover:shadow-md transition-all shadow-sm rounded-3xl overflow-hidden relative border-l-4 border-l-rose-500">
+                        <CardContent className="p-3 sm:p-6 py-4">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <Badge variant="destructive" className="text-[10px] mb-2 bg-rose-50 text-rose-600 border-rose-100 uppercase tracking-wider font-bold">
+                                {(() => {
+                                  const parts = liability.notes?.split("|") ?? [];
+                                  const type = parts[0];
+                                  const subType = parts[parts.length - 1];
+                                  const hasModel = parts.length > 1 && subType !== "Flat";
+                                  
+                                  if (type === "Loans") return LOAN_LABELS[liability.loanType];
+                                  if (type === "Bills" && subType && subType !== "Bills") return `Bills - ${subType}`;
+                                  if (type === "Insurance Dues") {
+                                    const cat = parts.find(p => p.startsWith("Cat:"))?.split(":")[1];
+                                    const sub = parts.find(p => p.startsWith("Sub:"))?.split(":")[1];
+                                    return sub ? `${cat} - ${sub}` : (cat ?? "Insurance");
+                                  }
+                                  if (hasModel) return `${type} - ${subType}`;
+                                  return type || LOAN_LABELS[liability.loanType];
+                                })()}
+                              </Badge>
+                              <p className="text-base font-bold text-slate-900">{liability.lenderName}</p>
+                              <div className="mt-3 grid grid-cols-2 gap-2 text-[10px] text-slate-500 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                {(() => {
+                                  const parts = liability.notes?.split("|") ?? [];
+                                  const type = parts[0];
+                                  if (type === "Taxes") {
+                                    const inc = parts.find(p => p.startsWith("Income:"))?.split(":")[1] ?? "0";
+                                    const tds = parts.find(p => p.startsWith("TDS:"))?.split(":")[1] ?? "0";
+                                    const adv = parts.find(p => p.startsWith("Advance:"))?.split(":")[1] ?? "0";
+                                    return (
+                                      <>
+                                        <p className="flex justify-between border-b border-slate-200 py-0.5">Net Tax Payable: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                        <p className="flex justify-between border-b border-slate-200 py-0.5">Outstanding: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
+                                        <p className="flex justify-between border-b border-slate-200 py-0.5">Annual Income: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(inc))}</span></p>
+                                        <p className="flex justify-between border-b border-slate-200 py-0.5">TDS Paid: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(tds))}</span></p>
+                                        {adv !== "0" && <p className="flex justify-between border-b border-slate-200 py-0.5">Advance Tax: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(adv))}</span></p>}
+                                        {liability.startDate && <p className="flex justify-between last:border-0 py-0.5">Due Date: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
+                                      </>
+                                    );
+                                  }
+                                  if (type === "Bills") {
+                                    return (
+                                      <>
+                                        <p className="flex justify-between border-b border-slate-200 py-0.5">Original Bill: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                        <p className="flex justify-between border-b border-slate-200 py-0.5">Current Outstanding: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
+                                        <p className="flex justify-between border-b border-slate-200 py-0.5">Penalty Rate: <span className="text-slate-700 font-medium">{liability.interestRate}%</span></p>
+                                        {liability.startDate && <p className="flex justify-between last:border-0 py-0.5">Due Date: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
+                                      </>
+                                    );
+                                  }
+                                  if (type === "Insurance Dues") {
+                                    const cat = parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "";
+                                    const sub = parts.find(p => p.startsWith("Sub:"))?.split(":")[1];
+                                    const prem = parts.find(p => p.startsWith("Premium:"))?.split(":")[1];
+                                    const yrs = parts.find(p => p.startsWith("Years:"))?.split(":")[1];
+                                    return (
+                                      <>
+                                        <p className="flex justify-between border-b border-slate-200 py-0.5">Total Premium: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                        <p className="flex justify-between border-b border-slate-200 py-0.5">Amount Due: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
+                                        {prem && <p className="flex justify-between border-b border-slate-200 py-0.5">Annual Premium: <span className="text-slate-700 font-medium">{formatCurrency(parseFloat(prem))}</span></p>}
+                                        {yrs && <p className="flex justify-between border-b border-slate-200 py-0.5">Tenure: <span className="text-slate-700 font-medium">{yrs} yrs</span></p>}
+                                        {sub && <p className="flex justify-between border-b border-slate-200 py-0.5">Type: <span className="text-slate-700 font-medium">{sub}</span></p>}
+                                        {liability.startDate && <p className="flex justify-between last:border-0 py-0.5">Start: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
+                                      </>
+                                    );
+                                  }
+                                   if (type === "Household Obligations") {
+                                     const cat = parts.find(p => p.startsWith("Cat:"))?.split(":")[1];
+                                     return (
+                                       <>
+                                         <p className="flex justify-between border-b border-slate-200 py-0.5">Monthly Amount: <span className="text-slate-900 font-bold">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                         {cat && <p className="flex justify-between border-b border-slate-200 py-0.5">Category: <span className="text-slate-700 font-medium">{cat}</span></p>}
+                                         {liability.startDate && <p className="flex justify-between border-b border-slate-200 py-0.5">Start Date: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
+                                         {liability.endDate && <p className="flex justify-between last:border-0 py-0.5">End Date: <span className="text-slate-500">{formatDate(liability.endDate)}</span></p>}
+                                       </>
+                                     );
+                                   }
+                                  return (
+                                    <>
+                                      <p className="flex justify-between border-b border-slate-200 py-0.5">Total: <span className="text-slate-900 font-medium">{formatCurrency(liability.totalLoanAmount)}</span></p>
+                                      <p className="flex justify-between border-b border-slate-200 py-0.5">Outstanding: <span className="text-rose-600 font-bold">{formatCurrency(liability.outstandingAmount)}</span></p>
+                                      <p className="flex justify-between border-b border-slate-200 py-0.5">Interest: <span className="text-slate-700 font-medium">{liability.interestRate}%</span></p>
+                                      <p className="flex justify-between border-b border-slate-200 py-0.5">EMI: <span className="text-slate-700 font-medium">{formatCurrency(liability.emi)}</span></p>
+                                      {liability.startDate && <p className="flex justify-between border-b border-slate-200 py-0.5">Start: <span className="text-slate-500">{formatDate(liability.startDate)}</span></p>}
+                                      {liability.endDate && <p className="flex justify-between last:border-0 py-0.5">End: <span className="text-slate-500">{formatDate(liability.endDate)}</span></p>}
+                                    </>
+                                  );
+                                })()}
+                              </div>
+                              {(!liability.notes?.startsWith("Taxes") && !liability.notes?.startsWith("Bills") && !liability.notes?.startsWith("Insurance Dues") && (liability.loanType === "home_loan" || liability.loanType === "car_loan" || liability.loanType === "personal_loan" || liability.loanType === "business_loan" || liability.loanType === "education_loan" || liability.notes?.startsWith("Loans") || liability.notes?.startsWith("Credit Cards & BNPL") || liability.notes?.startsWith("EMIs"))) && (
+                                <LoanValuation liability={liability} />
+                              )}
+                            </div>
+                            <div className="flex gap-1">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-100" onClick={() => {
+                                const parts = liability.notes?.split("|") ?? [];
+                                const type = parts[0];
+                                setLiabilityDialog({
+                                  editId: liability.id,
+                                  liabilityType: type,
+                                  loanType: liability.loanType,
+                                  lenderName: liability.lenderName,
+                                  totalLoanAmount: String(liability.totalLoanAmount),
+                                  outstandingAmount: String(liability.outstandingAmount),
+                                  interestRate: String(liability.interestRate),
+                                  emi: String(liability.emi),
+                                  startDate: liability.startDate?.split("T")[0] ?? "",
+                                  endDate: liability.endDate?.split("T")[0] ?? "",
+                                  interestType: parts.includes("Flat") ? "Flat" : "Reducing",
+                                  subType: parts[parts.length - 1] === "Flat" ? "" : parts[parts.length - 1],
+                                  tenure: "", 
+                                  income: parts.find(p => p.startsWith("Income:"))?.split(":")[1] ?? "",
+                                  tds: parts.find(p => p.startsWith("TDS:"))?.split(":")[1] ?? "",
+                                  advanceTax: parts.find(p => p.startsWith("Advance:"))?.split(":")[1] ?? "",
+                                  standardDeduction: parts.find(p => p.startsWith("StdDed:"))?.split(":")[1] ?? "75000",
+                                  insuranceCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
+                                  insuranceSubtype: parts.find(p => p.startsWith("Sub:"))?.split(":")[1] ?? "",
+                                  propertyValue: "",
+                                  insuranceRate: String(liability.interestRate),
+                                  premium: parts.find(p => p.startsWith("Premium:"))?.split(":")[1] ?? "",
+                                  tenureYears: parts.find(p => p.startsWith("Years:"))?.split(":")[1] ?? "",
+                                  baseRate: parts.find(p => p.startsWith("Base:"))?.split(":")[1] ?? "",
+                                  addOns: parts.find(p => p.startsWith("Addons:"))?.split(":")[1] ?? "",
+                                  discounts: parts.find(p => p.startsWith("Disc:"))?.split(":")[1] ?? "",
+                                  householdCategory: parts.find(p => p.startsWith("Cat:"))?.split(":")[1] ?? "",
+                                  householdAmount: parts.find(p => p.startsWith("Amt:"))?.split(":")[1] ?? "",
+                                  rent: parts.find(p => p.startsWith("Rent:"))?.split(":")[1] ?? "",
+                                  maintenance: parts.find(p => p.startsWith("Maint:"))?.split(":")[1] ?? "",
+                                  taxes: parts.find(p => p.startsWith("Taxes:"))?.split(":")[1] ?? "",
+                                  electricity: parts.find(p => p.startsWith("Elec:"))?.split(":")[1] ?? "",
+                                  water: parts.find(p => p.startsWith("Water:"))?.split(":")[1] ?? "",
+                                  gas: parts.find(p => p.startsWith("Gas:"))?.split(":")[1] ?? "",
+                                  internet: parts.find(p => p.startsWith("Net:"))?.split(":")[1] ?? "",
+                                  groceries: parts.find(p => p.startsWith("Groceries:"))?.split(":")[1] ?? "",
+                                  fees: parts.find(p => p.startsWith("Fees:"))?.split(":")[1] ?? "",
+                                  books: parts.find(p => p.startsWith("Books:"))?.split(":")[1] ?? "",
+                                  academicCosts: parts.find(p => p.startsWith("Acad:"))?.split(":")[1] ?? "",
+                                  maidSalary: parts.find(p => p.startsWith("Maid:"))?.split(":")[1] ?? "",
+                                  cookSalary: parts.find(p => p.startsWith("Cook:"))?.split(":")[1] ?? "",
+                                  serviceCosts: parts.find(p => p.startsWith("Serv:"))?.split(":")[1] ?? "",
+                                  medicalBills: parts.find(p => p.startsWith("MedB:"))?.split(":")[1] ?? "",
+                                  medicines: parts.find(p => p.startsWith("MedI:"))?.split(":")[1] ?? "",
+                                  miscCosts: parts.find(p => p.startsWith("Misc:"))?.split(":")[1] ?? "",
+                                });
+                              }}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-500 hover:text-rose-600 hover:bg-rose-50" onClick={() => { if(confirm("Delete liability?")) deleteLiability.mutateAsync({ clientId: clientId!, liabilityId: liability.id }).then(invalidate); }}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+
+                    {/* Pagination footer for Liabilities */}
+                    {totalLiabilitiesPages > 1 && (
+                      <div className="flex items-center justify-between border-t border-slate-100 pt-5 mt-4">
+                        <p className="text-xs text-slate-500">
+                          Showing <span className="font-bold text-slate-900">{(activePage - 1) * itemsPerPage + 1}</span> to{" "}
+                          <span className="font-bold text-slate-900">{Math.min(activePage * itemsPerPage, sortedLiabilities.length)}</span> of{" "}
+                          <span className="font-bold text-slate-900">{sortedLiabilities.length}</span> entries
+                        </p>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={activePage === 1}
+                            onClick={() => setMainLiabilitiesPage(activePage - 1)}
+                            className="rounded-xl border-slate-200"
+                          >
+                            Previous
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            disabled={activePage === totalLiabilitiesPages}
+                            onClick={() => setMainLiabilitiesPage(activePage + 1)}
+                            className="rounded-xl border-slate-200"
+                          >
+                            Next
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
         </div>
       </div>
 
@@ -2501,7 +2625,7 @@ export default function ClientDetailPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Relation</Label>
-                <Select value={familyMemberDialog?.relation ?? "Child"} onValueChange={(val: any) => setFamilyMemberDialog(prev => prev ? { ...prev, relation: val } : null)}>
+                <Select value={["Parent", "Father", "Mother"].includes(familyMemberDialog?.relation ?? "Child") ? "Parent" : (familyMemberDialog?.relation ?? "Child")} onValueChange={(val: any) => setFamilyMemberDialog(prev => prev ? { ...prev, relation: val } : null)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Parent">Parent</SelectItem>

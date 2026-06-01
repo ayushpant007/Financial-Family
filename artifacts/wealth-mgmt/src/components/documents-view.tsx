@@ -51,6 +51,7 @@ interface UserWithMpin extends User {
 const ESSENTIAL_CHECKLIST = [
   { id: "pan", label: "PAN Card", keywords: ["pan"] },
   { id: "aadhaar", label: "Aadhaar Card", keywords: ["aadhar", "adhaar", "uidai"] },
+  { id: "passport", label: "Passport", keywords: ["passport", "pass port"] },
   { id: "will", label: "Will & Succession", keywords: ["will", "trust", "succession", "will.pdf"] },
   { id: "property", label: "Property Papers", keywords: ["property", "house", "land", "deed"] },
   { id: "investment", label: "Investment Certificate", keywords: ["investment", "mutual", "stock", "fd", "bond", "inv", "fund"] },
@@ -106,6 +107,13 @@ export function DocumentsView({ isAdmin = false, hideHeader = false }: { isAdmin
       setSetMpinOpen(true);
     }
   }, [user]);
+  const [filterClientId, setFilterClientId] = React.useState<string>("");
+
+  React.useEffect(() => {
+    if (filterClientId) {
+      setTargetClientId(filterClientId);
+    }
+  }, [filterClientId]);
 
   const { data: documents, isLoading } = useQuery<Document[]>({
     queryKey: ["documents"],
@@ -125,6 +133,12 @@ export function DocumentsView({ isAdmin = false, hideHeader = false }: { isAdmin
       return res.json();
     }
   });
+
+  const filteredDocuments = React.useMemo(() => {
+    if (!documents) return [];
+    if (!filterClientId) return documents;
+    return documents.filter((doc) => doc.clientId.toString() === filterClientId);
+  }, [documents, filterClientId]);
 
   // Extraction removed as per user request
   const extraction = null;
@@ -375,7 +389,30 @@ export function DocumentsView({ isAdmin = false, hideHeader = false }: { isAdmin
             </div>
           )}
         </div>
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          {isAdmin && (
+            <div className="relative flex items-center bg-white border border-slate-200 rounded-xl px-3 h-10 shadow-sm min-w-[200px] hover:border-slate-300 transition-colors">
+              <span className="text-[10px] font-extrabold uppercase text-slate-400 tracking-wider mr-2 shrink-0">Client:</span>
+              <select
+                className="text-xs font-bold text-slate-700 bg-transparent outline-none cursor-pointer w-full pr-4 py-1.5 appearance-none"
+                style={{
+                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e")`,
+                  backgroundRepeat: 'no-repeat',
+                  backgroundPosition: 'right center',
+                  backgroundSize: '12px'
+                }}
+                value={filterClientId}
+                onChange={(e) => setFilterClientId(e.target.value)}
+              >
+                <option value="">All Clients Documents</option>
+                {clients?.map((c) => (
+                  <option key={c.id} value={c.id.toString()}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
           <Button 
             variant="outline" 
             className="gap-2 h-10 border-slate-200 bg-white hover:bg-slate-50 rounded-xl font-bold text-xs shadow-sm transition-all"
@@ -396,7 +433,7 @@ export function DocumentsView({ isAdmin = false, hideHeader = false }: { isAdmin
         <Card className="border border-slate-200 bg-white shadow-sm rounded-3xl overflow-hidden">
           <CardHeader className="border-b border-slate-100 p-6">
             <CardTitle className="text-base font-bold text-slate-900">Upload New Document</CardTitle>
-            <CardDescription className="text-slate-400 text-xs mt-1">Support for PDF, DOCX, and Images (.jpg, .png)</CardDescription>
+            <CardDescription className="text-slate-400 text-xs mt-1">Support for PDF, DOCX, Excel (.xlsx, .csv), and Images (.jpg, .png)</CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             {isAdmin && (
@@ -433,7 +470,7 @@ export function DocumentsView({ isAdmin = false, hideHeader = false }: { isAdmin
                   ref={fileInputRef}
                   type="file" 
                   className="hidden" 
-                  accept=".pdf,.docx,.jpg,.jpeg,.png"
+                  accept=".pdf,.docx,.xlsx,.csv,.jpg,.jpeg,.png"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (!file) return;
@@ -450,7 +487,7 @@ export function DocumentsView({ isAdmin = false, hideHeader = false }: { isAdmin
                     }
 
                     // 2. Check extension
-                    const allowed = [".pdf", ".docx", ".jpg", ".jpeg", ".png"];
+                    const allowed = [".pdf", ".docx", ".xlsx", ".csv", ".jpg", ".jpeg", ".png"];
                     const ext = file.name.substring(file.name.lastIndexOf(".")).toLowerCase();
                     if (!allowed.includes(ext)) {
                       toast({
@@ -503,7 +540,7 @@ export function DocumentsView({ isAdmin = false, hideHeader = false }: { isAdmin
             </CardHeader>
             <CardContent className="p-6">
               {(() => {
-                const checklistStatus = checkDocumentStatus(documents);
+                const checklistStatus = checkDocumentStatus(filteredDocuments);
                 const completedCount = checklistStatus.filter(x => x.isUploaded).length;
                 const totalCount = checklistStatus.length;
                 const pct = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
@@ -569,7 +606,7 @@ export function DocumentsView({ isAdmin = false, hideHeader = false }: { isAdmin
                 <Clock className="h-8 w-8 animate-spin mr-3" />
                 Loading documents...
               </div>
-            ) : documents?.length === 0 ? (
+            ) : filteredDocuments?.length === 0 ? (
               <div className="py-12 flex flex-col items-center justify-center text-slate-400 bg-slate-50/30">
                 <FileText className="h-12 w-12 mb-4 opacity-20" />
                 <p className="text-sm font-medium">No documents uploaded yet.</p>
@@ -586,7 +623,7 @@ export function DocumentsView({ isAdmin = false, hideHeader = false }: { isAdmin
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {documents?.map((doc) => (
+                    {filteredDocuments?.map((doc) => (
                       <tr key={doc.id} className="hover:bg-slate-50/50 transition-all duration-200 group">
                         {/* 1. Document details, filename, and owner client */}
                         <td className="p-4 pl-6 align-middle">

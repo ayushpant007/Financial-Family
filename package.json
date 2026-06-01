@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "build": "pnpm --filter @workspace/db run setup && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/wealth-mgmt run build && cp -r artifacts/wealth-mgmt/dist/public/* public/",
+    "build": "pnpm --filter @workspace/db run setup && pnpm --filter @workspace/api-server run build && pnpm --filter @workspace/wealth-mgmt run build && node -e \"fs.cpSync('artifacts/wealth-mgmt/dist/public', 'public', {recursive: true})\"",
     "typecheck:libs": "echo skipping libs typecheck",
     "typecheck": "echo skipping typecheck",
     "dev": "pnpm --parallel --filter @workspace/api-server --filter @workspace/wealth-mgmt run dev"

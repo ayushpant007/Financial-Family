@@ -41,7 +41,7 @@ const MemberCard = React.memo(({
       style={{ transformStyle: "preserve-3d", backfaceVisibility: "hidden" }}
     >
       <div className={`p-4 rounded-2xl mb-4 ${isPrimary ? "bg-primary text-white" : "bg-slate-100 text-slate-500"}`}>
-        {isPrimary ? <User size={28} /> : (member.relation === "Spouse" ? <Heart size={28} /> : (member.relation === "Parent" ? <Users size={28} /> : <Baby size={28} />))}
+        {isPrimary ? <User size={28} /> : (member.relation === "Spouse" ? <Heart size={28} /> : (["Parent", "Father", "Mother"].includes(member.relation || "") ? <Users size={28} /> : <Baby size={28} />))}
       </div>
       <h3 className="font-bold text-base text-center truncate w-full mb-0.5 text-slate-900">{member.name}</h3>
       <Badge variant="secondary" className={`text-[10px] uppercase tracking-widest mb-3 px-2 h-5 font-black ${isPrimary ? "bg-primary text-white" : "bg-slate-100 text-slate-600"}`}>
@@ -105,7 +105,7 @@ export function FamilyTree({
   const MAX_SCALE = 2;
 
   const spouse = React.useMemo(() => familyMembers.find((m) => m.relation === "Spouse"), [familyMembers]);
-  const parents = React.useMemo(() => familyMembers.filter((m) => m.relation === "Parent"), [familyMembers]);
+  const parents = React.useMemo(() => familyMembers.filter((m) => (m.relation as string) === "Parent" || (m.relation as string) === "Father" || (m.relation as string) === "Mother"), [familyMembers]);
   const children = React.useMemo(() => familyMembers.filter((m) => m.relation === "Child"), [familyMembers]);
 
   const getMemberFinancials = React.useCallback((memberId: number | null) => {
@@ -257,7 +257,7 @@ export function FamilyTree({
   return (
     <div 
       ref={containerRef} 
-      className="p-2 md:p-10 bg-transparent rounded-2xl md:rounded-[3rem] overflow-hidden relative min-h-[500px] md:min-h-[850px] border border-slate-200 select-none shadow-inner"
+      className="p-2 md:p-10 grid-backdrop bg-slate-50/30 rounded-2xl md:rounded-[3rem] overflow-hidden relative min-h-[500px] md:min-h-[850px] border border-slate-200 select-none shadow-2xl backdrop-blur-sm"
     >
       <style>{`
         @keyframes lightTravel {
@@ -267,6 +267,10 @@ export function FamilyTree({
         .animated-path {
           stroke-dasharray: 10 30;
           animation: lightTravel 2s linear infinite;
+        }
+        .grid-backdrop {
+          background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+          background-size: 24px 24px;
         }
       `}</style>
 

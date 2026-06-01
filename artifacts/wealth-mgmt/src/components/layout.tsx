@@ -11,6 +11,7 @@ import {
   FileText,
   PanelLeft,
   PanelRight,
+  TrendingDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -119,7 +120,43 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Link>
             );
           })}
+
+          {/* Contextual Assets & Liabilities shortcuts — visible on client detail / family-tree pages */}
+          {(/^\/admin\/clients\/\d+/.test(location) || location.startsWith("/client/family-tree")) && (
+            <>
+              <div className="pt-3 pb-1 px-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Quick Jump</p>
+              </div>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("switch-tab", { detail: "assets" }));
+                  setTimeout(() => {
+                    document.getElementById("assets-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 100);
+                  if (isMobile) setSidebarOpen(false);
+                }}
+                className="w-full flex items-center gap-3 h-11 px-4 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-emerald-50 text-slate-600 hover:text-emerald-700 group cursor-pointer"
+              >
+                <Wallet className="h-4.5 w-4.5 text-emerald-500 transition-transform duration-300 group-hover:scale-110" />
+                <span>Assets</span>
+              </button>
+              <button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("switch-tab", { detail: "liabilities" }));
+                  setTimeout(() => {
+                    document.getElementById("liabilities-section")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }, 100);
+                  if (isMobile) setSidebarOpen(false);
+                }}
+                className="w-full flex items-center gap-3 h-11 px-4 rounded-lg text-sm font-medium transition-all duration-200 hover:bg-rose-50 text-slate-600 hover:text-rose-700 group cursor-pointer"
+              >
+                <TrendingDown className="h-4.5 w-4.5 text-rose-500 transition-transform duration-300 group-hover:scale-110" />
+                <span>Liabilities</span>
+              </button>
+            </>
+          )}
         </nav>
+
 
         <div className="border-t border-slate-200 p-6 bg-slate-50/50">
           <div className="mb-6 flex items-center gap-3 px-1">

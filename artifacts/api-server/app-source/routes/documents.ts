@@ -11,7 +11,7 @@ import { ExtractionService } from "../lib/extraction.service";
 import { eq, desc, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 
-const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".jpg", ".jpeg", ".png"];
+const ALLOWED_EXTENSIONS = [".pdf", ".docx", ".xlsx", ".csv", ".jpg", ".jpeg", ".png"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 const upload = multer({ 
@@ -99,6 +99,8 @@ router.get("/:id/download", requireAuth, async (req: Request, res: Response) => 
     const mimeTypes: Record<string, string> = {
       pdf: "application/pdf",
       docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      csv: "text/csv",
       jpg: "image/jpeg",
       jpeg: "image/jpeg",
       png: "image/png",

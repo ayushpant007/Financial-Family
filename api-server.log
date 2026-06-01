@@ -1,0 +1,14 @@
+◇ injected env (0) from .env // tip: ⌘ enable debugging { debug: true }
+◇ injected env (6) from ..\..\.env // tip: ◈ secrets for agents [www.dotenvx.com]
+[12:56:01.014] [32mINFO[39m (6432): [36mServer listening[39m
+    [35mport[39m: 3001
+[12:56:18.112] [32mINFO[39m (6432): [36mrequest completed[39m
+    [35mreq[39m: {
+      "id": 1,
+      "method": "GET",
+      "url": "/api/healthz"
+    }
+    [35mres[39m: {
+      "statusCode": 200
+    }
+    [35mresponseTime[39m: 7

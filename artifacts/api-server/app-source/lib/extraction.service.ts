@@ -21,6 +21,10 @@ export class ExtractionService {
       case 'jpeg':
       case 'png':
         return this.extractFromImage(filePath);
+      case 'csv':
+        return buffer.toString('utf-8');
+      case 'xlsx':
+        return '[Excel spreadsheet uploaded – text indexing not available]';
       default:
         throw new Error(`Unsupported file type: ${fileType}`);
     }
