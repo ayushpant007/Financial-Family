@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Layout } from "@/components/layout";
 import { formatCurrency } from "@/lib/utils-format";
-import { Users, TrendingUp, TrendingDown, IndianRupee, ArrowRight, PlusCircle, Landmark, Loader2 } from "lucide-react";
+import { Users, TrendingUp, TrendingDown, IndianRupee, ArrowRight, PlusCircle, Landmark, Loader2, FileSpreadsheet } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import { usePageBackground } from "@/hooks/usePageBackground";
+import { useState } from "react";
 
 const ASSET_LABELS: Record<string, string> = {
   mutual_fund_stock: "Mutual Funds / Stocks",
@@ -22,6 +23,32 @@ function RecentClientCard({ client }: { client: any }) {
   const { data: summary, isLoading } = useGetClientSummary(client.id, {
     query: { enabled: !!client.id, queryKey: getGetClientSummaryQueryKey(client.id) } as any
   });
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(`/api/clients/${client.id}/report`);
+      if (!response.ok) throw new Error("Failed to generate report");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Concise_Report_${client.name.replace(/\s+/g, "_")}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to generate report Excel sheet.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <Link href={`/admin/clients/${client.id}`}>
@@ -67,8 +94,20 @@ function RecentClientCard({ client }: { client: any }) {
             <span className="text-xs text-slate-400">Summary unavailable</span>
           )}
 
-          <div className="text-right flex-shrink-0 ml-auto sm:ml-0">
-            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 group-hover:text-slate-950 transition-colors">
+          <div className="flex items-center gap-3 ml-auto sm:ml-0 flex-shrink-0">
+            <button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="inline-flex items-center gap-1.5 text-[11px] font-black px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-950 text-slate-700 hover:text-amber-400 transition-all border border-slate-200/60 hover:border-slate-950 shadow-sm cursor-pointer disabled:opacity-50 whitespace-nowrap"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <FileSpreadsheet className="h-3.5 w-3.5" />
+              )}
+              {isDownloading ? "Generating..." : "Concise Report"}
+            </button>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 group-hover:text-slate-955 transition-colors">
               Manage Portfolio
               <ArrowRight className="h-3.5 w-3.5 group-hover:translate-x-1 transition-transform" />
             </span>

@@ -22,7 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency, formatDate } from "@/lib/utils-format";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, IndianRupee, ArrowLeft, Sparkles, Compass, BarChart3, Landmark, RefreshCw, Shield, Coins, Loader2, Wallet } from "lucide-react";
+import { Plus, Trash2, Pencil, TrendingUp, TrendingDown, IndianRupee, ArrowLeft, Sparkles, Compass, BarChart3, Landmark, RefreshCw, Shield, Coins, Loader2, Wallet, FileSpreadsheet } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { FundAutocomplete } from "@/components/fund-autocomplete";
 import { StockAutocomplete } from "@/components/stock-autocomplete";
@@ -505,6 +505,31 @@ export default function ClientDetailPage() {
   const [activeMainTab, setActiveMainTab] = useState<"assets" | "liabilities">("assets");
   const [mainAssetsPage, setMainAssetsPage] = useState(1);
   const [mainLiabilitiesPage, setMainLiabilitiesPage] = useState(1);
+  const [isDownloadingReport, setIsDownloadingReport] = useState(false);
+
+  const handleDownloadReport = async () => {
+    if (isDownloadingReport || !client) return;
+    setIsDownloadingReport(true);
+    try {
+      const response = await fetch(`/api/clients/${client.id}/report`);
+      if (!response.ok) throw new Error("Failed to generate report");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Concise_Report_${client.name.replace(/\s+/g, "_")}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to generate report Excel sheet.");
+    } finally {
+      setIsDownloadingReport(false);
+    }
+  };
+
 
   useEffect(() => {
     const handleSwitchTab = (e: Event) => {
@@ -1277,6 +1302,19 @@ export default function ClientDetailPage() {
               </p>
             </div>
           </div>
+
+          <Button
+            onClick={handleDownloadReport}
+            disabled={isDownloadingReport}
+            className="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-955 font-black text-xs px-5 py-3 rounded-2xl flex items-center gap-2 shadow-lg shadow-amber-500/10 cursor-pointer transition-all duration-300 disabled:opacity-50"
+          >
+            {isDownloadingReport ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-4 w-4" />
+            )}
+            {isDownloadingReport ? "Generating Report..." : "Generate Concise Report"}
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8" data-reveal data-reveal-delay="100">

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Layout } from "@/components/layout";
 import { formatCurrency } from "@/lib/utils-format";
-import { PlusCircle, Search, ArrowRight, Trash2, Users } from "lucide-react";
+import { PlusCircle, Search, ArrowRight, Trash2, Users, FileSpreadsheet, Loader2 } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { usePageBackground } from "@/hooks/usePageBackground";
 
@@ -153,6 +153,32 @@ function ClientTableRow({ client, onDelete }: { client: any; onDelete: (id: numb
   const { data: summary, isLoading } = useGetClientSummary(client.id, {
     query: { enabled: !!client.id, queryKey: getGetClientSummaryQueryKey(client.id) } as any,
   });
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(`/api/clients/${client.id}/report`);
+      if (!response.ok) throw new Error("Failed to generate report");
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Concise_Report_${client.name.replace(/\s+/g, "_")}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Failed to generate report Excel sheet.");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   return (
     <tr className="hover:bg-slate-50/50 transition-all duration-200 group">
@@ -223,6 +249,20 @@ function ClientTableRow({ client, onDelete }: { client: any; onDelete: (id: numb
             title="Delete Client Portfolio"
           >
             <Trash2 className="h-4.5 w-4.5" />
+          </Button>
+          <Button
+            onClick={handleDownload}
+            disabled={isDownloading}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 h-9 rounded-xl px-4 font-black border-slate-200 text-slate-700 hover:bg-slate-950 hover:text-amber-400 hover:border-slate-950 transition-all shadow-sm cursor-pointer text-[11px] whitespace-nowrap"
+          >
+            {isDownloading ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+            )}
+            {isDownloading ? "Generating..." : "Report"}
           </Button>
           <Link href={`/admin/clients/${client.id}`}>
             <Button variant="outline" size="sm" className="gap-1.5 h-9 rounded-xl px-4 font-black border-slate-200 text-slate-700 hover:bg-slate-950 hover:text-amber-400 hover:border-slate-950 transition-all shadow-sm cursor-pointer text-[11px] whitespace-nowrap">
